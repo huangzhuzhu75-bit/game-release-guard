@@ -15,6 +15,8 @@ def add_parser(sub):
     native = commands.add_parser("unity-inspect", help="Read-only PE, metadata and native-plugin evidence")
     native.add_argument("project", type=Path)
     native.add_argument("--build", type=Path, required=True)
+    security = commands.add_parser("security-inspect", help="Read-only source/config risk candidates; no report file")
+    security.add_argument("project", type=Path)
     for name in ("unreal-plan", "unreal-apply", "asset-plan"):
         cmd = commands.add_parser(name)
         cmd.add_argument("project", type=Path)
@@ -71,6 +73,9 @@ def run(args, confirm, emit, operation):
     if command.startswith("integrity-") or command == "drm-inspect":
         return run_integrity(args, confirm, emit, operation)
     project = c.detect_project(args.project)
+    if command == "security-inspect":
+        from .security import audit
+        return emit("INSPECTED", audit(project, operation=operation))
     if command.startswith("unreal-") or command == "asset-plan":
         return run_unreal(args, project, confirm, emit, operation)
     if command == "unity-inspect":

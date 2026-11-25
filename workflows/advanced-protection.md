@@ -72,3 +72,13 @@ python -m steam_release_guard advanced drm-inspect --original "D:/Private/origin
 运行时研究结论：可由启动器在游戏未运行、更新已结束时调用 `steam_release_guard.advanced.integrity.verify`，或在现有游戏框架中实现等价标准 SHA256 校验；应异步/分批处理，实测大资源 IO 成本，避免逐帧全量散列。可信清单/签名和重要状态优先由服务端验证。本模块没有注入游戏、内核驱动、反调试、自动删除或封禁逻辑；尚未验证任何游戏内运行时集成。遇到异常提示 Steam 验证文件/修复，保留存档和允许的 mod；合法补丁暂停检查并原子更新基线，不把旧版本清单套到新游戏。
 
 原 `scripts/Invoke-SteamDrm.ps1` 保留原有上传明确确认。先独立记录原 EXE SHA256，再执行已授权 Wrapper。`drm-inspect` 检查原件未变、输出 PE 结构及差异，**不能单靠二进制变化证明 Wrapper 成功**。Wrapper 日志、Steam 启动、离线行为和测试分支重新安装全部需要真实验收；本模块不运行 EXE 或上传 Steam。
+
+## 关键数据与多人客户端（只读）
+
+```powershell
+python -m steam_release_guard advanced security-inspect "D:/GameCopy" --json
+```
+
+直接输出文件、行号、候选问题、原因和修复方向，不写独立报告、不改源码、不连接服务器。覆盖字面量秘密、货币/背包/交易/奖励/结果、管理员标志、RPC、附近的本地随机数、调试入口、危险反序列化和证书绕过候选。发现 IsServer/HasAuthority/开发宏会记为上下文线索，不能认定安全或不安全；存在服务端检查时应逐条读取对应实现，避免重复开发。
+
+主要建议：客户端提交操作意图，服务端验证身份、所有权、数量/余额/价格、时序、速率、重放和幂等性，并原子处理交易/结算/奖励。离线游戏的可编辑存档和显示用数值应按实际威胁模型处理，不能一律判成漏洞。Blueprint、外部服务、动态/编码数据和跳过的大文件明确未验证，正则扫描不能证明服务端缺乏校验。不会自行改服务器、撤销 key 或输出秘密值。
