@@ -82,3 +82,20 @@ python -m steam_release_guard advanced security-inspect "D:/GameCopy" --json
 直接输出文件、行号、候选问题、原因和修复方向，不写独立报告、不改源码、不连接服务器。覆盖字面量秘密、货币/背包/交易/奖励/结果、管理员标志、RPC、附近的本地随机数、调试入口、危险反序列化和证书绕过候选。发现 IsServer/HasAuthority/开发宏会记为上下文线索，不能认定安全或不安全；存在服务端检查时应逐条读取对应实现，避免重复开发。
 
 主要建议：客户端提交操作意图，服务端验证身份、所有权、数量/余额/价格、时序、速率、重放和幂等性，并原子处理交易/结算/奖励。离线游戏的可编辑存档和显示用数值应按实际威胁模型处理，不能一律判成漏洞。Blueprint、外部服务、动态/编码数据和跳过的大文件明确未验证，正则扫描不能证明服务端缺乏校验。不会自行改服务器、撤销 key 或输出秘密值。
+
+## 性能、兼容性和三层验收
+
+```powershell
+python -m steam_release_guard advanced acceptance-template
+python -m steam_release_guard advanced acceptance-check "D:/Private/acceptance.json" --baseline-build "D:/Builds/Baseline" --candidate-build "D:/Builds/Protected" --baseline-manifest "D:/Private/baseline.json" --candidate-manifest "D:/Private/protected.json" --evidence-root "D:/Private/Measurements" --json
+```
+
+第一条仅打印模板。把对象保存为自己的 acceptance.json，填写不同 build-id 及从可信记录得到的两个 manifest_sha256；这两个清单分别由 integrity-create 创建。不要使用 `--json` 的外层 envelope 作为记录；若用 --json，取其 result 对象。
+
+- 同一硬件/OS/引擎、场景、画质、网络条件和冷热缓存条件下，分别测基线与每个单项保护，再测组合。时间/内存/CPU/网络/存档指标至少三次；单次可用于实际文件/补丁字节、崩溃次数。记录测量工具。不要以 Editor Play Mode 代替分发的游戏。
+- metrics 包含 startup_ms、scene_load_ms、memory_mib、cpu_percent、file_bytes、patch_bytes、crash_count、network_rtt_ms、save_read_ms、save_write_ms。file_bytes 自动计算清单范围；其他值需真实采样。每项填写 baseline_samples、candidate_samples 和自行选择的 max_regression_pct，未填阈值保持 NOT_VERIFIED。patch_bytes 使用实际 Steam/DLC 补丁产物，不能拿文件差异量冒充下载量。
+- 私有 evidence 引用形式为 `{"path":"session/load-times.csv","sha256":"实际64位小写哈希"}`，路径相对 evidence-root。记录数据来源与过程，保留脱敏日志/录像/测量文件。工具只核对文件存在和哈希，不能自动判断录像/日志含义。
+- runtime_checks 分别记录启动、资源、旧/新存档、联机、插件、离线、补丁、DLC、Steam 测试分支、调试入口。protection_checks 每个已启用保护单独填写 configuration、artifact、runtime。支持 PASS/FAIL/REVIEW/NOT_VERIFIED/NOT_APPLICABLE；不适用仍需人审，不能用来绕过必要验收。
+- PASS 声明缺证据降为 NOT_VERIFIED；有匹配证据也只记 RECORDED_PASS。REVIEW/NOT_VERIFIED 原样保留，不自动批准发行。游戏文件、证据被改或指标回退超阈值会 BLOCKED。候选崩溃次数非零会阻断。
+
+真实游戏验收当前尚未完成。待有可用磁盘、正确引擎、用户选择安装的保护器及游戏副本后执行；本工具不自动启动/上传真实游戏来补齐记录。

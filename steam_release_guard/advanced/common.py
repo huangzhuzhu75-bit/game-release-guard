@@ -25,7 +25,7 @@ class ProtectionAdapter(ABC):
         raise NotImplementedError
 
 
-def read_json(path, *, max_bytes=4 * 1024 * 1024):
+def parse_json(data):
     def pairs(items):
         result = {}
         for key, value in items:
@@ -34,13 +34,25 @@ def read_json(path, *, max_bytes=4 * 1024 * 1024):
             result[key] = value
         return result
     try:
-        path = safe_path(path)
-        if path.stat().st_size > max_bytes:
-            raise ValueError("oversized config")
-        return json.loads(path.read_text(encoding="utf-8-sig"), object_pairs_hook=pairs,
+        return json.loads(data.decode("utf-8-sig"), object_pairs_hook=pairs,
                           parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite")))
     except (OSError, ValueError, UnicodeError):
         raise GuardError("Cannot read a bounded, valid JSON document (duplicate keys are forbidden).") from None
+
+
+def read_bounded(path, max_bytes):
+    try:
+        with safe_path(path).open("rb") as handle:
+            data = handle.read(max_bytes + 1)
+        if len(data) > max_bytes:
+            raise GuardError("Input exceeds the supported size limit.")
+        return data
+    except OSError:
+        raise GuardError("Cannot read the selected input file.") from None
+
+
+def read_json(path, *, max_bytes=4 * 1024 * 1024):
+    return parse_json(read_bounded(path, max_bytes))
 
 
 def shape(value, required, optional=()):
@@ -105,6 +117,8 @@ def private_run(argv, folder, *, timeout=600, secrets=(), operation=None, cwd=No
     log = folder / "tool.log"
     spool = folder / "tool-output.private"
     started = time.monotonic()
+    log_limit = 16 * 1024 * 1024
+    oversized = False
     # File-backed output avoids an unbounded in-memory PIPE or pipe deadlock.
     process = None
     try:
@@ -114,7 +128,7 @@ def private_run(argv, folder, *, timeout=600, secrets=(), operation=None, cwd=No
                                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
             while process.poll() is None:
                 op.check_cancel()
-                if time.monotonic() - started > timeout or spool.stat().st_size > 16 * 1024 * 1024:
+                if time.monotonic() - started > timeout or spool.stat().st_size > log_limit:
                     raise GuardError("Tool exceeded time/log limit; partial output retained, no protection approved.")
                 time.sleep(.1)
         code = process.returncode
@@ -123,13 +137,20 @@ def private_run(argv, folder, *, timeout=600, secrets=(), operation=None, cwd=No
             process.kill()
             process.wait(timeout=10)
         if spool.exists():
-            raw = spool.read_bytes()[:16 * 1024 * 1024].decode("utf-8", errors="replace")
+            # Also bound a fast process which exits between polls. Never read the
+            # whole spool before slicing; that defeats the memory limit.
+            with spool.open("rb") as handle:
+                data = handle.read(log_limit + 1)
+            oversized = len(data) > log_limit
+            raw = data[:log_limit].decode("utf-8", errors="replace")
             for value in sorted((v for v in secrets if v), key=len, reverse=True):
                 raw = raw.replace(value, "[REDACTED]")
             raw = re.sub(r"(?im)((?:key|secret|password|token|exponent|modulus)\s*[:=]\s*)[^\r\n]+", r"\1[REDACTED]", raw)
             with log.open("xb") as handle:
                 handle.write(raw.encode("utf-8"))
             spool.unlink()  # Only our own bounded temporary log; no game file deletion.
+    if oversized:
+        raise GuardError("Tool exceeded log limit; truncated private log retained, no protection approved.")
     return {"exit_code": code, "log": str(log), "log_sha256": c.file_digest(log),
             "tool_sha256": c.file_digest(executable), "elapsed_seconds": round(time.monotonic() - started, 3)}
 

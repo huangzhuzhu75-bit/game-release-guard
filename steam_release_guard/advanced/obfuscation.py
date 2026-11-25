@@ -100,6 +100,8 @@ class ObfuzAdapter(ProtectionAdapter):
 
 
 def apply(project, config, **kwargs):
+    if not any(x["api_supported"] for x in ObfuzAdapter().detect(project)["installed_candidates"]):
+        raise GuardError("Reviewed Obfuz package missing; bridge was not installed.")
     return transactions.apply(project, planner=lambda: ObfuzAdapter().plan(project, config), **kwargs)
 
 
@@ -131,6 +133,26 @@ def build(project, config, editor, output, evidence_dir, *, operation=None, time
         execution = private_run(argv, evidence, operation=operation, timeout=timeout)
         receipt_path = evidence / "obfuscation.json"
         receipt = read_json(receipt_path) if receipt_path.exists() else None
+        if receipt is not None:
+            shape(receipt, {"configuration", "artifact", "runtime", "engine_version", "tool_version", "executable_sha256", "assemblies"})
+            if (receipt["configuration"] != "PASS" or receipt["artifact"] != "PASS" or receipt["runtime"] != "NOT_VERIFIED"
+                    or receipt["engine_version"] != project.version or receipt["tool_version"] != VERSION
+                    or not isinstance(receipt["assemblies"], list)):
+                raise GuardError("Invalid/unsupported obfuscation evidence; no protection approved.")
+            expected_names = {a["name"] for a in config["assemblies"]}
+            actual_names = []
+            for row in receipt["assemblies"]:
+                shape(row, {"name", "before_sha256", "after_sha256", "renamed_selected_types"})
+                if (row["name"] not in expected_names or type(row["renamed_selected_types"]) is not int or row["renamed_selected_types"] < 1
+                        or any(not isinstance(row[k], str) or not re.fullmatch("[0-9a-f]{64}", row[k]) for k in ("before_sha256", "after_sha256"))
+                        or row["before_sha256"] == row["after_sha256"]):
+                    raise GuardError("Missing selected assembly rename evidence.")
+                actual_names.append(row["name"])
+            executable = Path(output) / "Game.exe"
+            if set(actual_names) != expected_names or len(actual_names) != len(expected_names) or not executable.is_file() or c.file_digest(executable) != receipt["executable_sha256"]:
+                raise GuardError("Obfuscation receipt is not bound to the generated game output.")
+            if ObfuzAdapter().plan(project, config):
+                raise GuardError("Adapter/config changed during build; review this incomplete evidence.")
         record.update(execution=execution, artifact=receipt, status="REVIEW" if execution["exit_code"] == 0 and receipt else "FAIL")
         c.write_json(evidence / "execution.json", record)
         return record

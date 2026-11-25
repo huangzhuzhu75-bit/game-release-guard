@@ -13,7 +13,7 @@ from pathlib import Path
 from .. import core as c
 from ..operations import GuardError, Operation, check_space, writer
 from ..project_backup import safe_path, relative_name
-from .common import read_json, shape
+from .common import read_bounded, parse_json, shape
 
 
 def build_id(value):
@@ -99,11 +99,11 @@ def load_pinned(path, expected_hash, identifier):
     path = safe_path(path)
     if not isinstance(expected_hash, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", expected_hash):
         raise GuardError("An externally trusted manifest SHA256 is required.")
-    if c.file_digest(path) != expected_hash.lower():
+    data = read_bounded(path, 64 * 1024 * 1024)
+    if c.digest(data) != expected_hash.lower():
         raise GuardError("Manifest hash does not match the trusted pin; no baseline trusted.")
-    manifest = read_json(path, max_bytes=64 * 1024 * 1024)
-    if c.file_digest(path) != expected_hash.lower():
-        raise GuardError("Manifest changed during verification.")
+    # Parse exactly the bytes whose pin was checked, not a second filesystem read.
+    manifest = parse_json(data)
     shape(manifest, {"schema", "algorithm", "build_id", "created_utc", "files", "mutable"})
     if manifest["schema"] != 1 or manifest["algorithm"] != "SHA256" or manifest["build_id"] != identifier:
         raise GuardError("Manifest schema/algorithm/build ID mismatch; updates require a new trusted baseline.")

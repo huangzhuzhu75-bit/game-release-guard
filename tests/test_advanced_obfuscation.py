@@ -52,6 +52,9 @@ class ObfuscationTests(fixtures.GuardTests.__bases__[0]):
         project = self.unity()
         adapter = ob.ObfuzAdapter()
         self.assertEqual(adapter.detect(project)["status"], "MISSING")
+        with self.assertRaisesRegex(core.GuardError, "missing"):
+            ob.apply(project, self.config())
+        self.assertFalse((project.root / core.STATE).exists())
         package = self.put("Packages/com.code-philosophy.obfuz/package.json",
                            '{"name":"com.code-philosophy.obfuz","version":"4.0.0"}', project.root)
         self.assertTrue(adapter.detect(project)["installed_candidates"][0]["api_supported"])
@@ -60,6 +63,7 @@ class ObfuscationTests(fixtures.GuardTests.__bases__[0]):
 
     def test_advanced_changes_use_full_backup_and_byte_exact_old_rollback(self):
         project = self.unity()
+        self.put("Packages/com.code-philosophy.obfuz/package.json", '{"name":"com.code-philosophy.obfuz","version":"4.0.0"}', project.root)
         before = {str(p.relative_to(project.root)): p.read_bytes() for p in core.walk_files(project.root)}
         planned = ob.ObfuzAdapter().plan(project, self.config())
         manifest = ob.apply(project, self.config(), expected_plan=planned)
@@ -72,6 +76,7 @@ class ObfuscationTests(fixtures.GuardTests.__bases__[0]):
 
     def test_failed_full_backup_and_stale_plan_do_not_mutate_project(self):
         project = self.unity()
+        self.put("Packages/com.code-philosophy.obfuz/package.json", '{"name":"com.code-philosophy.obfuz","version":"4.0.0"}', project.root)
         planned = ob.ObfuzAdapter().plan(project, self.config())
         with mock.patch("steam_release_guard.project_backup.create", side_effect=core.GuardError("backup failed")):
             with self.assertRaises(core.GuardError):
@@ -106,3 +111,46 @@ class ObfuscationTests(fixtures.GuardTests.__bases__[0]):
         self.assertNotIn("DO_NOT_LOG", (folder / "tool.log").read_text())
         self.assertIn("done", (folder / "tool.log").read_text())
         self.assertFalse((folder / "tool-output.private").exists())
+
+    def test_fast_tool_exceeding_log_limit_is_not_success(self):
+        folder = self.root / "private"
+        folder.mkdir()
+
+        def fast_process(*args, **kwargs):
+            # Explicit fake process: exits before the first poll. The retained
+            # bytes must be bounded even without the polling loop running.
+            kwargs["stdout"].write(b"x" * (16 * 1024 * 1024 + 1))
+            return mock.Mock(poll=mock.Mock(return_value=0), returncode=0)
+
+        with mock.patch("steam_release_guard.advanced.common.subprocess.Popen", side_effect=fast_process):
+            with self.assertRaisesRegex(core.GuardError, "log limit"):
+                private_run([sys.executable], folder)
+        self.assertLessEqual((folder / "tool.log").stat().st_size, 16 * 1024 * 1024)
+        self.assertFalse((folder / "tool-output.private").exists())
+
+    def test_untrusted_build_receipt_requires_exact_assembly_and_output_binding(self):
+        project, config = self.unity(), self.config()
+        output = self.root / "build"
+        executable = self.put("Game.exe", b"synthetic receipt subject, not a runnable game", output)
+        receipt = {"configuration": "PASS", "artifact": "PASS", "runtime": "NOT_VERIFIED",
+                   "engine_version": project.version, "tool_version": "4.0.0",
+                   "executable_sha256": core.file_digest(executable),
+                   "assemblies": [{"name": "Game.Core", "before_sha256": "a" * 64,
+                                   "after_sha256": "b" * 64, "renamed_selected_types": 1}]}
+
+        for index, change in enumerate(({}, {"runtime": "PASS"}, {"executable_sha256": "0" * 64},
+                                        {"assemblies": []}, {"assemblies": receipt["assemblies"] * 2})):
+            def fake_tool(argv, folder, **kwargs):
+                (folder / "obfuscation.json").write_text(json.dumps({**receipt, **change}), encoding="utf-8")
+                return {"exit_code": 0}
+
+            with self.subTest(change=change), mock.patch.object(ob, "build_preview", return_value={}), \
+                 mock.patch.object(ob.ObfuzAdapter, "plan", return_value=[]), \
+                 mock.patch.object(ob, "private_run", side_effect=fake_tool):
+                if change:
+                    with self.assertRaises(core.GuardError):
+                        ob.build(project, config, self.root / "Unity.exe", output, self.root / f"proof{index}")
+                else:
+                    record = ob.build(project, config, self.root / "Unity.exe", output, self.root / f"proof{index}")
+                    self.assertEqual(record["status"], "REVIEW")
+                    self.assertEqual(record["artifact"]["runtime"], "NOT_VERIFIED")

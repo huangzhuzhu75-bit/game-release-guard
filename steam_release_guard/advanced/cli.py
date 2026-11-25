@@ -49,6 +49,11 @@ def add_parser(sub):
     drm.add_argument("--original", type=Path, required=True)
     drm.add_argument("--wrapped", type=Path, required=True)
     drm.add_argument("--expected-original-sha256", required=True)
+    commands.add_parser("acceptance-template", help="Print an unverified performance/runtime record template; no file writes")
+    acceptance = commands.add_parser("acceptance-check", help="Compare metrics and bind evidence to exact baseline/candidate builds")
+    acceptance.add_argument("record", type=Path)
+    for arg in ("baseline-build", "candidate-build", "baseline-manifest", "candidate-manifest", "evidence-root"):
+        acceptance.add_argument("--" + arg, type=Path, required=True)
     for name in ("unity-plan", "unity-apply", "unity-build"):
         cmd = commands.add_parser(name)
         cmd.add_argument("project", type=Path)
@@ -70,6 +75,13 @@ def add_parser(sub):
 
 def run(args, confirm, emit, operation):
     command = args.advanced_command
+    if command.startswith("acceptance-"):
+        from . import acceptance
+        if command == "acceptance-template":
+            return emit("TEMPLATE", acceptance.template())
+        record = acceptance.check(read_json(args.record), args.baseline_build, args.candidate_build,
+                                  args.baseline_manifest, args.candidate_manifest, args.evidence_root)
+        return emit("INSPECTED", record, code=2 if record["release_status"] == "BLOCKED" else 0)
     if command.startswith("integrity-") or command == "drm-inspect":
         return run_integrity(args, confirm, emit, operation)
     project = c.detect_project(args.project)
