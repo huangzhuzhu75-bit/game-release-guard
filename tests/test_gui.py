@@ -1,4 +1,5 @@
 """Exercise the UI's application callbacks on a synthetic project (no game engine)."""
+import gc
 import json
 import os
 import tempfile
@@ -10,6 +11,12 @@ from unittest import mock
 
 @unittest.skipUnless(os.name == "nt" or os.environ.get("DISPLAY"), "Desktop display required")
 class GuiTests(unittest.TestCase):
+    def tearDown(self):
+        # App's progress callback forms a reference cycle. Reclaim each destroyed
+        # test interpreter on its owner thread before the next test starts workers.
+        # Otherwise Python 3.10 can collect the previous Tk in a worker and abort.
+        gc.collect()
+
     def wait_for_worker(self, root, app):
         deadline = time.monotonic() + 15
         while app.busy and time.monotonic() < deadline:
