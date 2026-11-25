@@ -106,7 +106,7 @@ class ObfuscationTests(fixtures.GuardTests.__bases__[0]):
     def test_real_subprocess_has_redacted_bounded_log_and_no_shell(self):
         folder = self.root / "private"
         folder.mkdir()
-        record = private_run([sys.executable, "-c", "print('EncryptionKey=DO_NOT_LOG');print('done')"], folder)
+        record = private_run([Path(sys.executable).resolve(strict=True), "-c", "print('EncryptionKey=DO_NOT_LOG');print('done')"], folder)
         self.assertEqual(record["exit_code"], 0)
         self.assertNotIn("DO_NOT_LOG", (folder / "tool.log").read_text())
         self.assertIn("done", (folder / "tool.log").read_text())
@@ -124,7 +124,7 @@ class ObfuscationTests(fixtures.GuardTests.__bases__[0]):
 
         with mock.patch("steam_release_guard.advanced.common.subprocess.Popen", side_effect=fast_process):
             with self.assertRaisesRegex(core.GuardError, "log limit"):
-                private_run([sys.executable], folder)
+                private_run([Path(sys.executable).resolve(strict=True)], folder)
         self.assertLessEqual((folder / "tool.log").stat().st_size, 16 * 1024 * 1024)
         self.assertFalse((folder / "tool-output.private").exists())
 
