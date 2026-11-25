@@ -1,0 +1,6 @@
+{
+  "name": "SteamReleaseGuard.Obfuscation.Editor",
+  "references": ["SteamReleaseGuard.Editor", "Obfuz.Editor", "Obfuz.Runtime"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}
