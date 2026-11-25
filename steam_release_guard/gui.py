@@ -116,6 +116,7 @@ class App:
             return
         self.busy = True
         self.report_path = None
+        self.progress["value"] = 0
         self.operation = Operation(lambda event: self.events.put(("progress", event)))
         self.cancel_button.configure(state="normal")
         self.status.set("正在本地处理…")
@@ -266,6 +267,7 @@ class App:
                 self.write("ERROR: " + value)
             else:
                 status, text, report = value
+                self.progress["value"] = 100
                 self.status.set(status)
                 self.write("\n" + text)
                 self.report_path = report
