@@ -22,13 +22,21 @@ Gitleaks 与 Git diff 空白检查通过。原有失败暂存/安全清理用例
 
 首轮 CI 的 Windows / Python 3.10 出现 Tk 测试对象的跨线程回收错误：前一测试已销毁的窗口仍有循环引用，被后一测试的工作线程回收。测试现在在主线程 tearDown 中回收已销毁的对象；保留全部回调和断言，没有禁用 GUI 测试或放宽备份检查。兼容性结果以修复后的 CI 为准。
 
+修复后的实现提交为 92d2171b：[push CI](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions/runs/45607736801) 和 [PR CI](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions/runs/45607744127) 的 Windows/Linux × Python 3.10/3.12 四组合全部成功。Windows 3.10 日志为 74 项全部通过，无 Tk 错误。平台不适用的测试按既有条件跳过；Linux 无桌面的 GUI 跳过不等同于 Linux 原生 GUI 验收。
+
 ## 真实工程的全量备份与恢复
 
 只读访问已存在的 Unity **6000.6.6f1** 工程。范围为 **24,710 个文件、1,980 个目录、1,316,975,166 字节**，包含缓存和已有构建。
 
-全量恢复核验仍在运行，完成前本节结果为 **NOT_VERIFIED**。
+全量备份和恢复均为 **COMPLETE**。工具对源文件、备份和恢复目标进行逐文件核验；恢复仅创建新目录。随后独立脚本再次读取原工程、备份文件和恢复副本，三方的 **24,710 个文件 SHA256 全部一致，1,980 个目录集合全部一致**，原工程内容未改变。
+
+最终实现可识别完整备份清单及恢复凭据，从新副本检测到相同引擎版本；只读 plan 显示原有三个适配文件，audit 保持 REQUIRES_MANUAL_REVIEW。报告存于工程外，没有为了复核而修改恢复副本。
+
+独立复核脚本最初使用普通 Windows 路径，读到超过 260 字符的恢复路径时失败；此时工具自身的恢复已完成。验收脚本改为 Windows 扩展路径后重跑三方全部文件与目录比对，结果通过。原失败日志和修正后的完整验证日志均保留，未将失败运行直接标为通过。
 
 首次实物验证发现 Windows 对 EXE 文件的 stat 与 fstat 执行权限位推断不同，触发保守拒绝。该次备份保持 INCOMPLETE，未进入适配。实现已改为比较 Windows 上稳定的身份字段并双端复核内容；EXE/BAT 回归用例通过，首轮失败记录保留。
+
+对首轮真实失败备份分别执行 backup-verify 和 backup-restore：两者均退出 1 并明确拒绝 INCOMPLETE，恢复目标没有被创建。
 
 ## CLI 与原生 GUI 副本往返
 
