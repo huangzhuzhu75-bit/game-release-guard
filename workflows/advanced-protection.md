@@ -26,3 +26,11 @@ python -m steam_release_guard rollback "D:/GameCopy" --yes --json
 日志、符号映射、原程序集备份为私有资料。不要上传 Steam 或 GitHub。桥接检查 Obfuz 的 success 事件和实际程序集元数据，要求选中类型有改名证据；配置和原 Obfuz.asset 在 finally 中恢复。断电/进程被杀时可能无法执行 finally，保留副本，使用完整备份重新恢复；不要对唯一工程执行。
 
 构建完成仍需插件、旧/新存档、反射/JSON、RPC/联机、离线、更新和真实保护效果验收。`execution.json` 的 REVIEW 不是发行 PASS。关闭混淆使用普通 P0 构建入口或回滚桥接；关闭后名称分析更容易。
+
+## Unity 元数据与原生插件（只读）
+
+```powershell
+python -m steam_release_guard advanced unity-inspect "D:/GameCopy" --build "D:/Builds/Protected-001" --json
+```
+
+仅输出检查结果，不写报告文件、不执行/删除 DLL。[技术限制](../docs/P3-METADATA.md) 包含版本核查、插件依赖和元数据方案排除理由。

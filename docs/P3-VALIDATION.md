@@ -8,3 +8,9 @@
 - 用本机 Unity 6000.6.6f1 的 Roslyn/真实引用程序集编译 Obfuz.Runtime、Obfuz.Editor、P0 builder 和新增 bridge，成功。外部源码固定 b83c53d4，MIT，仅下载到隔离 D 盘作编译检查；没有安装进用户游戏。
 - 供应商源码产生过时 UnsafeUtility API 和未使用字段警告；本次未修改第三方源码。编译脚本保留用于复现。
 - 实际 Obfuz 构建、IL2CPP 游戏启动、存档/联机/性能：**NOT_VERIFIED**。字符串/控制流额外初始化尚未实现，拒绝启用。未加密 metadata。
+
+## 阶段 2：元数据与原生模块
+
+- 新增 4 项测试通过：PE32/PE32+、CLR 区别、截断/越界拒绝、未知 metadata 不误报加密、敏感候选脱敏且不改文件。
+- 用实际 Unity.exe 和阶段 1 编译的 bridge DLL 做只读 PE 检查，正确区分原生与托管，并列出导入依赖。
+- 核对本机引擎 metadata 头版本；未修改引擎、插件或 metadata。没有可批准的 metadata 加密方案，功能明确 NOT_VERIFIED，不冒充已实现。

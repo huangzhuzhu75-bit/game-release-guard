@@ -12,6 +12,9 @@ def add_parser(sub):
     detect = commands.add_parser("obfuscator-detect", help="Inspect an optional local Obfuz package without executing it")
     detect.add_argument("project", type=Path)
     detect.add_argument("--tool-path", type=Path)
+    native = commands.add_parser("unity-inspect", help="Read-only PE, metadata and native-plugin evidence")
+    native.add_argument("project", type=Path)
+    native.add_argument("--build", type=Path, required=True)
     for name in ("unity-plan", "unity-apply", "unity-build"):
         cmd = commands.add_parser(name)
         cmd.add_argument("project", type=Path)
@@ -34,6 +37,10 @@ def add_parser(sub):
 def run(args, confirm, emit, operation):
     command = args.advanced_command
     project = c.detect_project(args.project)
+    if command == "unity-inspect":
+        from .binary import unity_audit
+        inspected = unity_audit(project, args.build)
+        return emit("INSPECTED", inspected, code=2 if inspected["release_status"] == "BLOCKED" else 0)
     adapter = obfuscation.ObfuzAdapter()
     if command == "obfuscator-detect":
         return emit("INSPECTED", adapter.detect(project, args.tool_path))
