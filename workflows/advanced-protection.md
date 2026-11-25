@@ -34,3 +34,24 @@ python -m steam_release_guard advanced unity-inspect "D:/GameCopy" --build "D:/B
 ```
 
 仅输出检查结果，不写报告文件、不执行/删除 DLL。[技术限制](../docs/P3-METADATA.md) 包含版本核查、插件依赖和元数据方案排除理由。
+
+## Unreal 独立配置与容器检查
+
+编辑 [UE 策略](../examples/advanced/unreal-policy.json)，每项都是显式开关。当前审查范围 UE 5.0–5.6；未知/自编译 GUID 和更新版本需重新核查。现有 AES key 必须是有效非零 32 字节 Base64；签名字段只检查编码/非空，**不是 RSA key 对正确性验证**。生产 key 必须由你在 UE 管理；SRG 不生成/轮换，不在结果中输出其值。
+
+```powershell
+python -m steam_release_guard advanced unreal-plan "D:/UECopy" --config "D:/Profiles/unreal.json" --json
+python -m steam_release_guard advanced asset-plan "D:/UECopy" --config "D:/Profiles/unreal.json" --json
+python -m steam_release_guard advanced unreal-apply "D:/UECopy" --config "D:/Profiles/unreal.json" --backup-dir "D:/Backups/UECopy" --dry-run --json
+python -m steam_release_guard advanced unreal-apply "D:/UECopy" --config "D:/Profiles/unreal.json" --backup-dir "D:/Backups/UECopy" --yes --json
+python -m steam_release_guard advanced unreal-verify "D:/UECopy" --engine-root "D:/UE_5.6" --build "D:/Builds/UE-001" --evidence-dir "D:/Private/UE-001" --crypto-json "D:/Private/Crypto.json" --dry-run --json
+python -m steam_release_guard advanced unreal-verify "D:/UECopy" --engine-root "D:/UE_5.6" --build "D:/Builds/UE-001" --evidence-dir "D:/Private/UE-001" --crypto-json "D:/Private/Crypto.json" --yes --json
+```
+
+实际构建使用原有 `build-script` 流程。`unreal-verify` 读取 Engine/Build/Build.version，匹配项目版本后检查 UnrealPak 自身帮助：Pak 调用 -Test/-List，IoStore 独立调用 -Info/-List（帮助没有对应参数则不猜测）。只保存私有日志和文件哈希，不提取资源。返回零仅记 REVIEW；必须审阅日志里的具体加密范围、签名/完整性证据，并在同版引擎启动验证。缺少官方工具不会安装第三方解包器。
+
+参考 [UE5.6 Zen Loader 官方说明](https://dev.epicgames.com/documentation/en-us/unreal-engine/zen-loader-in-unreal-engine?application_version=5.6)。`.utoc` 描述容器结构，`.ucas` 承载数据；Pak index 加密不能证明 IoStore 加密。部分项目还有分区 `.ucas`、DLC 和平台配置覆盖，全部需纳入版本清单和实际加载验证。签名有效性当前保留 NOT_VERIFIED，不能依据 `.sig` 存在或退出码推断有效。
+
+`asset-plan` 对 Content 文件按显式路径规则分 A/B/C，缺规则和重复命中都标 REVIEW。分级不会自动创建 Chunk/PrimaryAssetLabel/AssetManager 或分配 secondary key。先在 Editor 审核依赖和加载关系后实现分块；全资源加密是全局开关，不能称为分级加密。分别评估 A 核心资源、B 普通资源、C 公开资源的收益，记录启动、加载、内存、补丁和 DLC 基线。
+
+回滚仍使用普通 `rollback`。关闭某一开关只写该项 false，含义是放弃相应加密/签名保护；不会删除 key。所有修改保持原 INI 编码、无关配置、注释与数组；后续编辑冲突会阻止回滚。

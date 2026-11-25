@@ -14,3 +14,9 @@
 - 新增 4 项测试通过：PE32/PE32+、CLR 区别、截断/越界拒绝、未知 metadata 不误报加密、敏感候选脱敏且不改文件。
 - 用实际 Unity.exe 和阶段 1 编译的 bridge DLL 做只读 PE 检查，正确区分原生与托管，并列出导入依赖。
 - 核对本机引擎 metadata 头版本；未修改引擎、插件或 metadata。没有可批准的 metadata 加密方案，功能明确 NOT_VERIFIED，不冒充已实现。
+
+## 阶段 3：UE CryptoKeys / Pak / IoStore
+
+- 新增 7 项合成测试通过：独立开关、密钥原值保留、逐字节回滚、非法/零密钥拒绝、关闭保护、版本不符、缺失分区、depot 中私钥引用拒绝、分级冲突、只读预览与脱敏。
+- 官方工具调用测试使用明确标注的 mock，检查 Pak 与 IoStore 走不同命令，即使退出零也不会给出保护 PASS。没有实际安装 UE，实际命令兼容、RSA key 对/签名有效性、加密产物、资源加载和 DLC/补丁 **NOT_VERIFIED**。
+- 分级是分类/建议，不自动建立 Chunk 或 per-asset 加密。生产配置不生成/轮换 key。

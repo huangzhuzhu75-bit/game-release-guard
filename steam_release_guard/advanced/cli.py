@@ -15,6 +15,22 @@ def add_parser(sub):
     native = commands.add_parser("unity-inspect", help="Read-only PE, metadata and native-plugin evidence")
     native.add_argument("project", type=Path)
     native.add_argument("--build", type=Path, required=True)
+    for name in ("unreal-plan", "unreal-apply", "asset-plan"):
+        cmd = commands.add_parser(name)
+        cmd.add_argument("project", type=Path)
+        cmd.add_argument("--config", type=Path, required=True)
+        if name == "unreal-apply":
+            cmd.add_argument("--backup-dir", type=Path)
+            cmd.add_argument("--yes", action="store_true")
+            cmd.add_argument("--dry-run", action="store_true")
+    verify = commands.add_parser("unreal-verify", help="Run matching UE official tools on Pak and IoStore separately")
+    verify.add_argument("project", type=Path)
+    verify.add_argument("--engine-root", type=Path, required=True)
+    verify.add_argument("--build", type=Path, required=True)
+    verify.add_argument("--evidence-dir", type=Path, required=True)
+    verify.add_argument("--crypto-json", type=Path)
+    verify.add_argument("--yes", action="store_true")
+    verify.add_argument("--dry-run", action="store_true")
     for name in ("unity-plan", "unity-apply", "unity-build"):
         cmd = commands.add_parser(name)
         cmd.add_argument("project", type=Path)
@@ -37,6 +53,8 @@ def add_parser(sub):
 def run(args, confirm, emit, operation):
     command = args.advanced_command
     project = c.detect_project(args.project)
+    if command.startswith("unreal-") or command == "asset-plan":
+        return run_unreal(args, project, confirm, emit, operation)
     if command == "unity-inspect":
         from .binary import unity_audit
         inspected = unity_audit(project, args.build)
@@ -67,3 +85,32 @@ def run(args, confirm, emit, operation):
         raise c.GuardError("Install reviewed Obfuz 4.0.0 in the project before applying its bridge; no files changed.")
     manifest = obfuscation.apply(project, config, expected_plan=planned, backup_dir=args.backup_dir, operation=operation)
     return emit("APPLIED", {**preview, "journal": str(manifest) if manifest else None})
+
+
+def run_unreal(args, project, confirm, emit, operation):
+    from . import unreal
+    command = args.advanced_command
+    if command == "unreal-verify":
+        preview = unreal.verify_preview(project, args.engine_root, args.build, args.evidence_dir, args.crypto_json)
+        decision = confirm(args, preview)
+        if decision is not None:
+            return decision
+        record = unreal.verify(project, args.engine_root, args.build, args.evidence_dir, args.crypto_json, operation=operation)
+        return emit(record["status"], record, code=2 if record["status"] == "FAIL" else 0)
+    config = read_json(args.config)
+    if command == "asset-plan":
+        return emit("PREVIEW", unreal.asset_plan(project, config))
+    planned = unreal.UnrealAdapter().plan(project, config)
+    preview = {"engine": project.engine, "engine_version": project.version,
+               "changes": [{"path": x.path, "purpose": x.purpose, "before_sha256": x.before_sha256} for x in planned],
+               "requested_switches": config["pak"], "iostore_requested": config["iostore"],
+               "signing_key_validity": "NOT_VERIFIED" if config["pak"]["signing"] else "NOT_REQUESTED",
+               "artifact": "NOT_VERIFIED", "runtime": "NOT_VERIFIED",
+               "tradeoff": "Disabling a switch reduces its corresponding protection. All-asset encryption increases IO/patch cost; grade rules do not automatically create chunks."}
+    if command == "unreal-plan":
+        return emit("PREVIEW", preview)
+    decision = confirm(args, preview)
+    if decision is not None:
+        return decision
+    journal = unreal.apply(project, config, expected_plan=planned, backup_dir=args.backup_dir, operation=operation)
+    return emit("APPLIED", {**preview, "journal": str(journal) if journal else None})
