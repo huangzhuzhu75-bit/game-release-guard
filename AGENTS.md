@@ -1,8 +1,8 @@
 # Steam Release Guard 项目指令
 
-开始任务时先完整读取 [统一 Skill / Markdown 操作说明](skills/steam-release-guard/SKILL.md)，再读取适用的 [Unity](workflows/unity-release.md)、[Unreal](workflows/unreal-release.md)、[安全检查](workflows/security-audit.md) 或 [回滚](workflows/rollback.md) 工作流。这是明确的读取指令，普通 Markdown 链接不代表原生 Skill 已自动加载。
+开始任务时先完整读取 [统一 Skill / Markdown 操作说明](skills/steam-release-guard/SKILL.md)，按其中的新项目开发、已有项目只读检查、已授权工具操作三种场景处理。这是明确的读取指令，普通 Markdown 链接不代表原生 Skill 已自动加载。只有实际需要调用工具时，再读对应的 [Unity](workflows/unity-release.md)、[Unreal](workflows/unreal-release.md)、[安全检查](workflows/security-audit.md) 或 [回滚](workflows/rollback.md) 工作流及真实代码。
 
-先核实项目目录、引擎精确版本，运行 plan 或 audit，说明修改范围并保留原工程。写操作需要已授权的具体范围；不擅自改密钥、删未知文件、上传源码/资源或上传 Steam。REVIEW 和 NOT_VERIFIED 不得改成 PASS。
+先核实项目目录、引擎精确版本。已有工程检查默认只读、仅在对话中给出位置/风险/建议，不改代码、不生成报告；audit 即使带 --json 也会写报告，不能默认调用。执行已授权的工具操作前先 plan/预览，或在用户要求报告后 audit。其余操作边界以统一 Skill 为准。
 
 首次使用真实游戏先读 [完整备份与恢复](workflows/backup.md)，在恢复的新副本上尝试。apply 有文件变更时必须先成功完成工程外的完整文件备份与核验；不绕过该步骤、不上传备份、不强制覆盖恢复目标。
 

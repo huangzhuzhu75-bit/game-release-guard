@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCUMENTS = [ROOT / name for name in ("README.md", "AI-START.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md",
                                     "skills/steam-release-guard/SKILL.md")]
 DOCUMENTS += sorted((ROOT / "workflows").glob("*.md"))
+DOCUMENTS += [ROOT / "skills/steam-release-guard" / name for name in ("INSTALL.md", "EXAMPLES.md")]
 
 
 class MarkdownTests(unittest.TestCase):

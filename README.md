@@ -6,9 +6,13 @@
 
 这是一套发布加固与检查工具，不是反盗版保证、资源加密壳或反作弊系统。当前 `0.2.0.dev0` 是 **V2 P0 验收候选**，在 v0.1.0 上补强事务稳定性，保留 CLI、GUI 和报告。P1—P4 尚未实施；完整引擎打包和 Steam 测试分支结果仍需真实项目验收。
 
-## 下载后让 AI 直接读
+## 独立游戏安全开发 Skill
 
-打开 **[AI-START.md](AI-START.md)**，复制其中的提示词，填写你的工程目录即可。统一说明在 **[skills/steam-release-guard/SKILL.md](skills/steam-release-guard/SKILL.md)**；不必安装任何 AI 工具或全局 Skill。
+唯一核心文件是 **[skills/steam-release-guard/SKILL.md](skills/steam-release-guard/SKILL.md)**，可以单独下载使用，不依赖本工具或 Python。新 Unity/Unreal 项目按其规则开发；已有工程默认只读检查，在对话中指出文件位置、风险和建议，不改代码、不生成报告。需要 CLI 适配时才读取本仓库的真实命令。
+
+阅读 **[安装说明](skills/steam-release-guard/INSTALL.md)**、**[使用示例](skills/steam-release-guard/EXAMPLES.md)** 或 **[AI-START.md](AI-START.md)**。优先提供项目级 Claude Code、Codex、Gemini CLI 安装路径；其他工具直接读 Markdown。无需安装新的 AI 客户端，也不修改全局设置。
+
+实际读取、四个合成场景、未验证平台和独立包校验见 [Skill 验收记录](docs/SKILL-VALIDATION-20261125.md)。这份 Skill 的知识指导不表示已给游戏实施深度保护。
 
 项目提供 `AGENTS.md`、`CLAUDE.md`、`GEMINI.md` 入口和五份工作流：[完整备份](workflows/backup.md)、[Unity](workflows/unity-release.md)、[Unreal](workflows/unreal-release.md)、[安全与发布包检查](workflows/security-audit.md)、[回滚](workflows/rollback.md)。不支持原生 Skills 的工具直接阅读 Markdown；没有 AI 管理服务、工具扫描/安装、MCP/ACP/Hooks 管理器或全局配置修改。未安装客户端的实际读取不标为已验证。
 

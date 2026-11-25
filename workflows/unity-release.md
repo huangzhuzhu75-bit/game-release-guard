@@ -2,6 +2,8 @@
 
 前置阅读：[统一操作规则](../skills/steam-release-guard/SKILL.md)。在工具仓库根目录运行下面命令；替换占位目录。保留原工程和原构建。没有独立 AI 服务或自动安装步骤。
 
+本页用于用户要求发布适配的场景。仅检查已有工程时，按 Skill 在对话中给出发现，不默认执行本页流程；audit 会写本地报告，须在用户要求报告后执行。apply 的授权范围包含配置修改、完整备份和本地报告。
+
 1. 读取工程 `ProjectSettings/ProjectVersion.txt`，核实精确的 6000.x Editor。其他版本停止自动适配。确认 Python 3.10+、Unity 许可证、Windows IL2CPP 模块、C++ 工具链和插件兼容性；本 P0 不自动验证/安装这些依赖。
 2. 先检查并解释拟修改的文件。apply 只安装 Editor 适配器和更新 `.gitignore`；不是执行引擎构建。
 

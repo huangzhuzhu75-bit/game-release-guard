@@ -1,36 +1,38 @@
-# 下载后，直接让 AI 读这份说明
+# 下载后，让 AI 直接读取
 
-解压完整仓库，在仓库根目录打开你正在使用的 AI 工具。无需安装 Claude Code、Gemini CLI 或任何 AI 管理组件；本工具运行只需已有的 Python 3.10+，桌面界面另需 tkinter。
+核心知识只有 [skills/steam-release-guard/SKILL.md](skills/steam-release-guard/SKILL.md) 一份，可以独立使用。项目级安装路径、单文件下载和通用 Markdown 方式见 [安装说明](skills/steam-release-guard/INSTALL.md)，真实路径提示词见 [使用示例](skills/steam-release-guard/EXAMPLES.md)。
 
-首次试用先按 [完整备份与恢复](workflows/backup.md) 保留整个工程目录，并恢复新副本，在副本上尝试。apply 也会在修改前强制完成独立的完整备份与核验。
+## 两种日常用法
 
-复制下面这段话，把工程目录换成自己的真实目录：
+新项目或已经授权的功能开发：
 
-> 请先完整读取 `skills/steam-release-guard/SKILL.md`，再读取与我的引擎对应的 `workflows/unity-release.md` 或 `workflows/unreal-release.md`。我的游戏工程是【填写目录】，已打包构建是【填写目录，或写“尚未构建”】。先确认引擎版本，运行 plan 或 audit，解释修改范围、备份和未验证事项。未经我授权不要修改配置、密钥、删除文件、上传源码/资源或上传 Steam。完成后给我检查结果，保留 REVIEW 和 NOT_VERIFIED。
+> 请完整读取【SKILL.md 本地路径】，先核对【游戏目录】的引擎版本和已有结构，按其中规范完成【明确的开发任务】。把安全性融入代码，不额外生成安全报告。
 
-如果 AI 无法访问本地文件，先把 [统一操作说明](skills/steam-release-guard/SKILL.md) 及相应工作流的文本交给它阅读；命令由你在本地执行。不要为此上传游戏源码、资源、密钥或私有备份。仅下载这份 Markdown 可以阅读流程，执行 CLI 需要完整仓库。
+检查已有项目：
 
-## 入口与验收边界
+> 请完整读取【SKILL.md 本地路径】，检查【游戏目录】的安全风险。已有发布包在【目录，或“尚未构建”】。指出具体文件/位置、问题、原因、建议、已有保护和未验证项。
 
-| 工具 | 项目入口 | 当前证据 |
+第二种用法默认只读，不改代码、不创建独立报告。若 AI 无法读本地文件，提供 Skill 文本及非敏感项目信息即可；它不能声称已经检查工程，不要为此上传源码、资源或密钥。
+
+## 需要发布适配时
+
+只有用户要求调用 Release Guard 时，才读取本仓库 README、相关工作流和实际 CLI 代码，核对版本与 --help；先 plan/预览或已授权的 audit。**audit 即使加 --json 也会写 HTML/JSON 报告，没有 --no-report。** 不应把“检查工程”自动变成运行 audit。
+
+实际适配先按 [完整备份与恢复](workflows/backup.md) 保留工程，并在恢复的新副本尝试；apply 有变更时会强制完整备份及核验，随后生成本地报告。风险授权、回滚和能力边界统一遵循 Skill。
+
+## 平台入口与证据
+
+| 平台 | 完整仓库入口 / 独立安装 | 验收边界 |
 | --- | --- | --- |
-| 通用 AI / 人工操作 | 本页 → [统一操作说明](skills/steam-release-guard/SKILL.md) | Markdown 链接、命令与 CLI 对照验证；无需原生 Skill 支持 |
-| Codex | [AGENTS.md](AGENTS.md) | 项目指令格式按官方文档；本机 CLI 0.171.0-alpha.13，Markdown 可直接读取；原生 Skill 自动发现 NOT_VERIFIED |
-| Claude Code | [CLAUDE.md](CLAUDE.md) | 官方项目文件及 `@` 导入格式；本机未安装，实际客户端读取 NOT_VERIFIED |
-| Gemini CLI | [GEMINI.md](GEMINI.md) | 官方项目文件及 `@` 导入格式；本机未安装，实际客户端读取 NOT_VERIFIED |
-| 其他 AI 工具 | 手动提供 Markdown | 不声称原生 Skill 支持，也不修改全局设置 |
+| Codex | [AGENTS.md](AGENTS.md) / 项目 .agents/skills | 本机 0.171.0-alpha.13；原生发现 4/4，四个合成任务均完整读取正文并完成设计/只读检查；真实游戏运行未验证。 |
+| Claude Code | [CLAUDE.md](CLAUDE.md) / 项目 .claude/skills | 官方格式核对；本机未安装，实际读取/行为 NOT_VERIFIED。 |
+| Gemini CLI | [GEMINI.md](GEMINI.md) / 项目 .gemini/skills | 官方格式核对；本机未安装，实际读取/行为 NOT_VERIFIED。 |
+| 其他 AI | 显式读取指定 SKILL.md | 通用 Markdown；不声称原生自动发现或特定客户端实测。 |
 
-根据用户决定，不为验收安装缺失的 AI CLI。`skills/steam-release-guard/` 是说明源，不是声称所有工具自动扫描的目录。没有注册脚本、后台服务或管理系统。
+不为验证安装缺失客户端，不注册后台服务，不修改全局配置。安装成功、被发现、正文被读、行为符合要求是不同证据；不能仅凭文件存在就宣布平台通过。验收方法和限制见 [Skill 验收记录](docs/SKILL-VALIDATION-20261125.md)。
 
-如果下载者已经安装相应客户端，可在项目根目录让它列出实际读到的文件、复述“先 plan/audit”“不修改密钥”“不将 REVIEW/NOT_VERIFIED 标为 PASS”，再只执行一次 `plan --json` 检查。记录客户端版本与实际输出后才能把该项标为已验证；阅读成功不代表游戏保护验收通过。
+## 官方依据
 
-## 官方格式依据
+2026-11-25 核对：[Claude Code Skills](https://code.claude.com/docs/en/skills)、[项目指令](https://code.claude.com/docs/en/memory)；[Codex Skills](https://developers.openai.com/codex/skills)、[AGENTS.md](https://developers.openai.com/codex/guides/agents-md)；[Gemini Skills](https://geminicli.com/docs/cli/skills/)、[GEMINI.md](https://geminicli.com/docs/cli/gemini-md/)。
 
-核对日期：2026-11-25。Claude/Gemini 未指定本机版本，Context7 官方仓库资料与当前官方文档只能证明格式依据，不能替代某个已安装版本的实测。
-
-- [Claude Code 项目指令与导入](https://code.claude.com/docs/en/memory)：根目录 `CLAUDE.md`，相对 `@path` 导入。
-- [Codex AGENTS.md](https://developers.openai.com/codex/guides/agents-md)：根目录项目级 Markdown 指令；链接由 AI 按指令读取。
-- [Codex Skills](https://developers.openai.com/codex/skills)：原生仓库发现目录与本项目的通用 `skills/` 说明路径不同，本项目不自动注册。
-- [Gemini CLI GEMINI.md](https://geminicli.com/docs/cli/gemini-md/)：项目 Markdown 上下文及相对文件导入。
-
-工作流：[Unity](workflows/unity-release.md) · [Unreal](workflows/unreal-release.md) · [安全和发布包检查](workflows/security-audit.md) · [回滚和失败暂存清理](workflows/rollback.md)。
+工作流：[Unity](workflows/unity-release.md) · [Unreal](workflows/unreal-release.md) · [安全与发布包检查](workflows/security-audit.md) · [回滚和失败暂存清理](workflows/rollback.md)。
