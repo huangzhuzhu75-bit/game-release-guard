@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import queue
+import json
 import threading
 import tkinter as tk
 import webbrowser
@@ -13,6 +14,7 @@ from .core import (STATE, GuardError, apply, audit, atomic_write, build_script, 
                    plan, rollback, save_report, stage_release)
 from .operations import Operation, safe_error, writer
 from .transactions import rollback_preview
+from . import project_backup
 
 
 class App:
@@ -21,6 +23,8 @@ class App:
         self.project = tk.StringVar()
         self.build = tk.StringVar()
         self.encrypt = tk.BooleanVar(value=False)
+        self.backup_dir = tk.StringVar()
+        self.backup_note = tk.StringVar(value="完整备份：默认存到工程旁的 .srg-backups 目录；适配前自动复制并核验。")
         self.status = tk.StringVar(value="选择工程即可开始。先检查，也可以直接一键适配。")
         self.report_path = None
         self.events = queue.Queue()
@@ -43,7 +47,7 @@ class App:
         style.map("Accent.TButton", background=[("active", "#7ce8ce")])
         style.configure("TCheckbutton", background="#0e1420", foreground="#dce8f5", font=("Microsoft YaHei UI", 10))
         style.map("TCheckbutton", background=[("active", "#0e1420")])
-        frame = ttk.Frame(root, padding=28)
+        frame = ttk.Frame(root, padding=20)
         frame.pack(fill="both", expand=True)
         ttk.Label(frame, text="STEAM / WINDOWS / LOCAL", style="Hint.TLabel").pack(anchor="w")
         ttk.Label(frame, text="Steam Release Guard", style="Title.TLabel").pack(anchor="w", pady=(4, 8))
@@ -65,10 +69,13 @@ class App:
             self.buttons.append(button)
         extra = ttk.Frame(frame)
         extra.pack(fill="x", pady=(0, 14))
-        for label, action in [("生成引擎构建脚本…", self.make_build_script), ("分离调试符号…", self.stage)]:
+        for label, action in [("完整备份", self.make_backup), ("恢复完整备份…", self.restore_backup),
+                              ("备份位置…", self.choose_backup_dir),
+                              ("生成构建脚本…", self.make_build_script), ("分离调试符号…", self.stage)]:
             button = ttk.Button(extra, text=label, command=action)
             button.pack(side="left", padx=(0, 8))
             self.buttons.append(button)
+        ttk.Label(frame, textvariable=self.backup_note, wraplength=980, style="Hint.TLabel").pack(anchor="w", pady=(0, 8))
         ttk.Label(frame, textvariable=self.status, wraplength=940).pack(anchor="w", pady=(4, 10))
         progress_row = ttk.Frame(frame)
         progress_row.pack(fill="x", pady=(0, 8))
@@ -85,7 +92,7 @@ class App:
         scroll.pack(side="right", fill="y")
         self.log.pack(fill="both", expand=True)
         self.write("Unity 6：安装仅在 Editor 中使用的 IL2CPP / 非开发构建入口。\nUnreal 5：配置 Shipping，并排除发布包调试文件。\n\n适配不会自动构建、上传 Steam、生成密钥或声称无法盗版。\n构建完成后，选择实际发布包再次检查，并进行实机验收。")
-        ttk.Label(frame, text="备份位于工程内 .steam-release-guard；建议关闭引擎编辑器后适配。", style="Hint.TLabel").pack(anchor="w", pady=(12, 0))
+        ttk.Label(frame, text="先关闭引擎和同步工具。完整备份在工程外；逐文件回滚记录仍在工程内 .steam-release-guard。", style="Hint.TLabel").pack(anchor="w", pady=(8, 0))
         self.poll_id = root.after(100, self.poll)
         root.bind("<Destroy>", self.on_destroy, add="+")
 
@@ -110,6 +117,48 @@ class App:
         self.log.insert("end", text + "\n")
         self.log.see("end")
         self.log.configure(state="disabled")
+
+    def choose_backup_dir(self):
+        value = filedialog.askdirectory(title="选择工程外的完整备份存放目录（可与工程不同磁盘）")
+        if value:
+            self.backup_dir.set(value)
+            self.backup_note.set("完整备份存放目录：" + value)
+
+    def make_backup(self):
+        try:
+            if not self.project.get().strip():
+                raise GuardError("请先选择工程。")
+            project = detect_project(self.project.get())
+            destination = project_backup.backup_root(project, self.backup_dir.get() or None)
+            if not messagebox.askyesno("完整备份工程", f"原工程：{project.root}\n备份存放目录：{destination}\n\n复制工程目录内全部文件，包括隐藏文件、缓存和资源；需要足够磁盘空间。\n请先关闭编辑器和同步工具。完成逐文件核验后才标记成功。继续？"):
+                return
+
+            def work():
+                result = project_backup.create(project, destination, operation=self.operation)
+                return ("完整备份已核验；原工程未修改。", f"已核验 {result['file_count']} 个文件。\n完整备份：{result['backup_path']}\n恢复时请选择新的工程目录。", None)
+            self.start_worker(work)
+        except Exception as error:
+            messagebox.showerror("无法备份", safe_error(error))
+
+    def restore_backup(self):
+        try:
+            source = filedialog.askdirectory(title="选择带 srg-project-backup.json 的日期备份目录")
+            if not source:
+                return
+            parent = filedialog.askdirectory(title="选择恢复副本的存放目录（会创建新子目录，不覆盖原工程）")
+            if not parent:
+                return
+            target = Path(parent) / ("RestoredProject-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f"))
+            preview = project_backup.restore_preview(source, target)
+            if not messagebox.askyesno("恢复到新工程目录", f"完整备份：{source}\n新工程：{target}\n文件数：{preview['file_count']}\n\n先核验全部备份，再复制并核验恢复结果。原工程保留。继续？"):
+                return
+
+            def work():
+                result = project_backup.restore(source, target, operation=self.operation, expected_preview=preview)
+                return ("完整恢复已核验；请先打开恢复副本检查。", f"新工程目录：{result['output']}\n恢复记录：{result['receipt']}\n原工程和备份均保留。", None)
+            self.start_worker(work)
+        except Exception as error:
+            messagebox.showerror("无法恢复完整备份", safe_error(error))
 
     def start_worker(self, work):
         if self.busy:
@@ -148,6 +197,7 @@ class App:
 
     def run(self, operation):
         project_text, build_text, encrypt = self.project.get().strip(), self.build.get().strip(), self.encrypt.get()
+        backup_dir = self.backup_dir.get() or None
         if not project_text:
             messagebox.showinfo("选择工程", "请先选择 Unity 或 Unreal 的工程根目录。")
             return
@@ -157,7 +207,9 @@ class App:
                 project = detect_project(project_text)
                 preview = plan(project, encrypt)
                 summary = "\n".join(f"• {c.path}: {c.purpose}" for c in preview) or "配置已存在；仅更新检查报告。"
-                if not messagebox.askyesno("确认适配范围", f"{project.engine} {project.version}\n{summary}\n\n先核验备份，写入阶段不可取消。继续？"):
+                destination = project_backup.backup_root(project, backup_dir)
+                backup_text = f"先完整备份工程内所有文件到：\n{destination}\n校验失败将停止适配。请先关闭编辑器和同步工具。" if preview else "工程无需修改，本次不重复创建完整备份。"
+                if not messagebox.askyesno("确认适配范围", f"{project.engine} {project.version}\n{summary}\n\n{backup_text}\n项目写入阶段不可取消。继续？"):
                     return
         except Exception as error:
             messagebox.showerror("无法预览", safe_error(error))
@@ -170,8 +222,11 @@ class App:
                 audit(project, build, operation=self.operation)  # Reject invalid artifact input before mutation.
             description = []
             if operation == "apply":
-                manifest = apply(project, encrypt, operation=self.operation, expected_plan=preview)
+                manifest = apply(project, encrypt, operation=self.operation, expected_plan=preview, backup_dir=backup_dir)
                 description.append(f"适配已写入，恢复记录：{manifest}" if manifest else "适配已存在，无需重复修改。")
+                if manifest:
+                    full = json.loads(manifest.read_text(encoding="utf-8"))["full_backup"]
+                    description.append(f"完整工程备份已核验：{full['backup_path']}")
             self.operation.step("检查工程和发布包", cancellable=operation != "apply")
             report = audit(project, build, operation=self.operation if operation == "audit" else None)
             self.operation.step("保存检查报告", cancellable=False)
@@ -254,6 +309,9 @@ class App:
             except queue.Empty:
                 break
             if kind == "progress":
+                if value.get("backup_path"):
+                    self.backup_note.set("已核验完整备份：" + value["backup_path"])
+                    self.write(self.backup_note.get())
                 self.progress["value"] = 100 * value["current"] / max(1, value["total"])
                 self.status.set(f"{value['phase']} ({value['current']}/{value['total']})" + ("" if value["cancellable"] else " · 当前阶段不可取消"))
                 self.cancel_button.configure(state="normal" if value["cancellable"] else "disabled")

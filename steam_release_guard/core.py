@@ -198,6 +198,8 @@ def valid_crypto_key(data: bytes) -> bool:
 
 
 def plan(project: Project, encrypt_index: bool = False) -> list[Change]:
+    from .project_backup import restored_roots
+    restored_roots(project.root)  # A partial full restore must not be adapted.
     require_supported(project)
     originals = {}
 
@@ -348,6 +350,11 @@ def audit(project: Project, build: Path | None = None, *, operation: Operation |
     if pending(project):
         add("INCOMPLETE_PROJECT_TRANSACTION", "fail", "recovery", "Incomplete or damaged project transaction",
             "Preserve recovery records and resolve rollback before release.")
+    from .project_backup import restored_roots
+    try:
+        restored_roots(project.root)
+    except GuardError as error:
+        add("INCOMPLETE_FULL_RESTORE", "fail", "recovery", "Full project restore is incomplete", str(error))
 
     try:
         require_supported(project)

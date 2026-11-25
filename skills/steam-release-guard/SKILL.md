@@ -17,7 +17,7 @@ description: 在用户自己的 Unity 6 或 Unreal Engine 5 Windows/Steam 工程
 
 1. 确认仓库位置、用户工程目录、引擎精确版本和实际构建目录。读取 Unity `ProjectVersion.txt` 或 UE `.uproject`；不要因本机装了某版本就替换项目版本。先确认 Python 3.10+；缺失时告知，不自行安装。
 2. 在工具仓库根目录执行 `plan` 或 `audit`，先读结果再修改。`plan` 不写工程；`audit` 会保存本地报告。版本不明、输入错误或已有未完成事务时停止相应写入。
-3. 解释将修改的文件、输出目录、报告、备份位置、可取消阶段和恢复方法。关闭引擎编辑器，保留原工程、原始构建和现有版本控制/备份，不擅自提交用户游戏工程。
+3. 解释将修改的文件、输出目录、报告、完整备份位置、可取消阶段和恢复方法。关闭引擎和同步工具，保留原工程。每次有修改的 apply 必须先完成工程外的完整文件备份及核验；没有跳过开关。首次试用按 [完整备份流程](../../workflows/backup.md) 先恢复出新副本再适配，不擅自提交用户游戏工程。
 4. 只有用户已授权该具体修改范围时才执行写操作；使用 `--yes` 表示这次明确授权，不能把示例中的参数当作授权。先运行 `--dry-run`；范围变化、冲突或新危险操作需重新确认。
 5. 完成后检查 CLI 退出码、JSON `status`、事务状态与报告。提供改动文件、备份、SHA256 验证结果、FAIL/WARN/REVIEW/NOT_VERIFIED 和下一项人工验收。失败也要报告，不能只说“命令已执行”。
 
@@ -36,7 +36,7 @@ python -m steam_release_guard stage 'D:/Builds/MyGame-v1' --release 'D:/Release/
 python -m steam_release_guard rollback 'D:/Games/MyGame' --dry-run --json
 ```
 
-其他实际入口：`build-script`（只生成脚本）、`stage-cleanup`（核验后清理失败副本）、`gui`。参数以仓库 `python -m steam_release_guard --help` 和各子命令 `--help` 为准。没有 `deploy`、`protect-all`、`steam-upload`、`resume` 命令。
+其他实际入口：`backup`（完整工程文件备份）、`backup-verify`（核验副本）、`backup-restore`（恢复到新目录）、`build-script`（只生成脚本）、`stage-cleanup`（核验后清理失败副本）、`gui`。参数以仓库 `python -m steam_release_guard --help` 和各子命令 `--help` 为准。没有 `deploy`、`protect-all`、`steam-upload`、`resume` 命令。
 
 - `--json` 输出单个 JSON 对象，含 schema/tool_version/command/status/result/error；不出现交互确认。`--progress` 可额外向 stderr 输出阶段事件。
 - 写命令支持 `--dry-run` / `--yes`。不加 `--yes` 时，交互终端先显示预览并询问；非交互或 JSON 模式返回 `CONFIRMATION_REQUIRED`。
@@ -61,6 +61,8 @@ python -m steam_release_guard rollback 'D:/Games/MyGame' --dry-run --json
 调试文本扫描是候选检查，覆盖不了所有 Blueprint、Prefab、二进制插件或运行时入口。资源扩展名、归档存在、GameAssembly.dll/metadata 存在都不能证明防提取有效。工具报告中的局部 PASS 仅限该检查项。
 
 ## 回滚与中断
+
+完整备份默认在工程同级 `<工程名>.srg-backups/<时间编号>/`，可用 `--backup-dir` 指定工程外目录；包含根目录内全部普通文件、隐藏文件和空目录，不跳过缓存。链接/连接点拒绝；外部依赖、系统环境、ACL/备用数据流等不保证包含。完整恢复仅到不存在的新目录，原工程和备份保留。具体命令、失败状态和权限要求见 [完整备份流程](../../workflows/backup.md)。
 
 按 [回滚工作流](../../workflows/rollback.md) 先预览。apply/rollback 的全部目标和备份先校验；后续修改发生冲突就停止，不要加“强制覆盖”。备份在工程 `.steam-release-guard/backups/`，可能含敏感配置，不上传。
 

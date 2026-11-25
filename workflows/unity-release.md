@@ -11,7 +11,7 @@ python -m steam_release_guard audit 'D:/Games/MyUnityGame' --json
 python -m steam_release_guard apply 'D:/Games/MyUnityGame' --dry-run --json
 ```
 
-3. 用户已授权该范围后，关闭编辑器，核实备份与输出位置，再执行：
+3. 首次试用先按 [完整备份与恢复](backup.md) 创建新的工程副本。用户已授权适配范围后，关闭编辑器和同步工具，核实工程外的完整备份位置，再执行；apply 会自动完整复制并核验，失败就停止：
 
 ```powershell
 python -m steam_release_guard apply 'D:/Games/MyUnityGame' --yes --json

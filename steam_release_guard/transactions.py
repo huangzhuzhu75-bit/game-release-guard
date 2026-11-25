@@ -18,8 +18,10 @@ def record(path, journal, status):
 
 
 def read_manifest(project, manifest):
+    from .project_backup import restored_roots
     journal = load_journal(manifest, "apply", allow_legacy=True)
-    if not isinstance(journal.get("root"), str) or c.absolute_path(journal["root"]) != project.root or journal.get("status") not in STATES:
+    allowed_roots = {project.root, *(c.absolute_path(p) for p in restored_roots(project.root))}
+    if not isinstance(journal.get("root"), str) or c.absolute_path(journal["root"]) not in allowed_roots or journal.get("status") not in STATES:
         raise GuardError("Backup belongs to a different project or has an invalid status. No files restored.")
     seen = set()
     if not journal["files"]:
@@ -64,7 +66,26 @@ def pending(project):
     return False
 
 
-def apply(project, encrypt_index=False, *, operation=None, expected_plan=None):
+def apply(project, encrypt_index=False, *, operation=None, expected_plan=None, backup_dir=None,
+          expected_backup_preview=None):
+    from . import project_backup
+    c.plan(project, encrypt_index)
+    op = operation or Operation()
+    # Full snapshot precedes even the project lock/state-directory writes.
+    with writer():
+        if pending(project):
+            raise GuardError("An incomplete project transaction needs rollback before a new apply.")
+        changes = c.plan(project, encrypt_index)
+        if expected_plan is not None and changes != expected_plan:
+            raise GuardError("Project changed after the preview. Review a fresh plan before applying.")
+        if not changes:
+            return None
+        full = project_backup.create(project, backup_dir, operation=op, expected_preview=expected_backup_preview)
+        op.check_cancel()
+        return _apply(project, encrypt_index, operation=op, expected_plan=changes, full_backup=full)
+
+
+def _apply(project, encrypt_index=False, *, operation=None, expected_plan=None, full_backup=None):
     # Invalid versions/keys must not even create a project state directory.
     c.plan(project, encrypt_index)
     op = operation or Operation()
@@ -98,7 +119,8 @@ def apply(project, encrypt_index=False, *, operation=None, expected_plan=None):
                         raise GuardError("Backup integrity check failed; no project files changed.")
                 entries.append({"path": change.path, "before_sha256": change.before_sha256,
                                 "after_sha256": c.digest(change.data), "backup": backup})
-            journal = {"root": str(project.root), "created_utc": c.utc_now(), "files": entries}
+            journal = {"root": str(project.root), "created_utc": c.utc_now(), "files": entries,
+                       "full_backup": full_backup}
             record(manifest, journal, "prepared")
             # Preflight every destination before the first mutation, not only as we go.
             for entry in entries:

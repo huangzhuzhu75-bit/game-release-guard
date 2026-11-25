@@ -12,6 +12,7 @@ from .core import (STATE, GuardError, apply, audit, atomic_write, build_script, 
 from .operations import Cancelled, Operation, safe_error, writer
 from .staging import cleanup_preview, cleanup_stage, preview as stage_preview
 from .transactions import rollback_preview
+from . import project_backup
 
 
 class Parser(argparse.ArgumentParser):
@@ -33,6 +34,8 @@ def parser() -> argparse.ArgumentParser:
         if name in {"audit", "apply"}:
             command.add_argument("--build", type=Path, help="Exact packaged depot folder, not the source project")
             command.add_argument("--report-dir", type=Path)
+        if name == "apply":
+            command.add_argument("--backup-dir", type=Path, help="Full backup parent outside project; default sibling <project>.srg-backups")
         if name == "audit":
             command.add_argument("--fail-on-warnings", action="store_true")
         if name == "build-script":
@@ -46,10 +49,18 @@ def parser() -> argparse.ArgumentParser:
     stage.add_argument("--project", type=Path, help="Optional project identity for the project lock")
     cleanup = sub.add_parser("stage-cleanup", help="Verify and remove only unchanged failed stage copies")
     cleanup.add_argument("journal", type=Path, help="Private srg-stage-journal.json")
+    backup = sub.add_parser("backup", help="Copy and verify ALL project files outside the project")
+    backup.add_argument("project", type=Path)
+    backup.add_argument("--backup-dir", type=Path, help="Parent for a new dated backup; default sibling <project>.srg-backups")
+    verify = sub.add_parser("backup-verify", help="Verify full backup contents without changing the project")
+    verify.add_argument("backup", type=Path, help="Dated backup folder containing srg-project-backup.json")
+    restore = sub.add_parser("backup-restore", help="Restore full backup into a NEW directory; never overwrite")
+    restore.add_argument("backup", type=Path)
+    restore.add_argument("--output", type=Path, required=True, help="A new project directory that does not exist")
     for name, command in sub.choices.items():
         command.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
         command.add_argument("--progress", action="store_true", help="Write phase progress to stderr")
-        if name in {"apply", "rollback", "build-script", "stage", "stage-cleanup"}:
+        if name in {"apply", "rollback", "build-script", "stage", "stage-cleanup", "backup", "backup-restore"}:
             command.add_argument("--dry-run", action="store_true", help="Validate and preview only; no writes")
             command.add_argument("--yes", action="store_true", help="Explicit consent to the reviewed write operation")
     return root
@@ -102,6 +113,14 @@ def main(argv=None) -> int:
             if args.progress:
                 print(json.dumps(event, ensure_ascii=False), file=sys.stderr)
         op = Operation(progress)
+        if command == "backup-verify":
+            return emit("VERIFIED", project_backup.verify(args.backup, operation=op))
+        if command == "backup-restore":
+            preview = project_backup.restore_preview(args.backup, args.output)
+            decision = confirm(args, preview)
+            if decision is not None:
+                return decision
+            return emit("COMPLETE", project_backup.restore(args.backup, args.output, operation=op, expected_preview=preview))
         if command == "stage":
             project = detect_project(args.project) if args.project else None
             preview = stage_preview(args.build, args.release, args.symbols, operation=op)
@@ -120,6 +139,12 @@ def main(argv=None) -> int:
                 return decision
             return emit("COMPLETE", cleanup_stage(args.journal, operation=op, expected_integrity=journal["integrity_sha256"]))
         project = detect_project(args.project)
+        if command == "backup":
+            preview = project_backup.preview(project, args.backup_dir, operation=op)
+            decision = confirm(args, preview)
+            if decision is not None:
+                return decision
+            return emit("COMPLETE", project_backup.create(project, args.backup_dir, operation=op, expected_preview=preview))
         if command == "plan":
             return emit("PREVIEW", plan_result(project, plan(project, args.encrypt_pak_index)))
         if command == "rollback":
@@ -150,15 +175,18 @@ def main(argv=None) -> int:
             audit(project, args.build, operation=op)  # Validate before any mutation, including consent prompts.
         backup = None
         changes = None
+        full_preview = None
         if command == "apply":
             changes = plan(project, args.encrypt_pak_index)
-            decision = confirm(args, plan_result(project, changes))
+            full_preview = project_backup.preview(project, args.backup_dir, operation=op) if changes else None
+            decision = confirm(args, {**plan_result(project, changes), "full_backup": full_preview})
             if decision is not None:
                 return decision
         # Keep apply and its resulting report in one serialized operation.
-        with writer(project if command == "apply" else None):
+        with writer():
             if command == "apply":
-                backup = apply(project, args.encrypt_pak_index, operation=op, expected_plan=changes)
+                backup = apply(project, args.encrypt_pak_index, operation=op, expected_plan=changes,
+                               backup_dir=args.backup_dir, expected_backup_preview=full_preview)
             op.step("auditing configuration and artifact", cancellable=False if backup else True)
             report = audit(project, args.build, operation=op if command == "audit" else None)
             op.step("writing local report", cancellable=False)
@@ -167,7 +195,9 @@ def main(argv=None) -> int:
         if getattr(args, "fail_on_warnings", False):
             blocked = blocked or any(f["status"] == "warn" for f in report["findings"])
         return emit("BLOCKED" if blocked else "REQUIRES_MANUAL_REVIEW",
-                    {"backup": str(backup) if backup else None, "report_path": str(path), "report": report}, code=2 if blocked else 0)
+                    {"backup": str(backup) if backup else None,
+                     "full_backup": json.loads(backup.read_text(encoding="utf-8")).get("full_backup") if backup else None,
+                     "report_path": str(path), "report": report}, code=2 if blocked else 0)
     except (KeyboardInterrupt, Cancelled) as error:
         return emit("CANCELLED", error=safe_error(error) if isinstance(error, Cancelled) else "Cancelled before completion; inspect recovery records.", code=130)
     except Exception as error:

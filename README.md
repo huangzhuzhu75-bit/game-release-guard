@@ -10,17 +10,40 @@
 
 打开 **[AI-START.md](AI-START.md)**，复制其中的提示词，填写你的工程目录即可。统一说明在 **[skills/steam-release-guard/SKILL.md](skills/steam-release-guard/SKILL.md)**；不必安装任何 AI 工具或全局 Skill。
 
-项目提供 `AGENTS.md`、`CLAUDE.md`、`GEMINI.md` 入口和四份工作流：[Unity](workflows/unity-release.md)、[Unreal](workflows/unreal-release.md)、[安全与发布包检查](workflows/security-audit.md)、[回滚](workflows/rollback.md)。不支持原生 Skills 的工具直接阅读 Markdown；没有 AI 管理服务、工具扫描/安装、MCP/ACP/Hooks 管理器或全局配置修改。未安装客户端的实际读取不标为已验证。
+项目提供 `AGENTS.md`、`CLAUDE.md`、`GEMINI.md` 入口和五份工作流：[完整备份](workflows/backup.md)、[Unity](workflows/unity-release.md)、[Unreal](workflows/unreal-release.md)、[安全与发布包检查](workflows/security-audit.md)、[回滚](workflows/rollback.md)。不支持原生 Skills 的工具直接阅读 Markdown；没有 AI 管理服务、工具扫描/安装、MCP/ACP/Hooks 管理器或全局配置修改。未安装客户端的实际读取不标为已验证。
 
 ## 双击使用
 
 1. 下载并解压仓库；本机需有 **Python 3.10+，含 tkinter**。无需 `pip install`，无需管理员权限。引擎构建另需原工程对应的引擎、许可证和 Windows 构建组件。
 2. 双击 **`Launch.cmd`**。如果自动寻找 Python 失败，把已有 `python.exe` 的完整路径写入 `.local/python-path.txt`，或设置进程环境变量 `SRG_PYTHON`。工具不会自行下载 Python。
-3. 选择工程根目录，先点击“检查”或运行 `plan`。点击 **一键适配** 后审阅文件范围，再确认；建议先关闭 Unity / Unreal 编辑器。
-4. 通过“生成引擎构建脚本…”生成并运行对应版本的构建命令；Unity 也可直接使用新增的菜单入口。选择实际发布包，再执行检查。
-5. 如需分离符号，选择三个互不嵌套的目录：原构建、空发布目录、空私有符号目录。复制并校验后，对新发布目录重新检查。
+3. 选择工程根目录，先点击“检查工程 / 发布包”或运行 `plan`。首次试用先关闭引擎和同步工具，点击 **完整备份**，完成后用 **恢复完整备份…** 创建新副本，再把“工程目录”切换到该副本。
+4. 点击 **一键适配**，审阅修改范围与完整备份位置。工具先复制并核验所选工程的全部文件，成功后才开始适配；失败就停止。
+5. 通过“生成构建脚本…”生成并运行对应版本的构建命令；Unity 也可直接使用新增的菜单入口。选择实际发布包，再执行检查。
+6. 如需分离符号，选择三个互不嵌套的目录：原构建、空发布目录、空私有符号目录。复制并校验后，对新发布目录重新检查。
 
 “一键”指配置适配、安装 Unity 构建入口和生成检查报告；它不会替你安装引擎、判断插件兼容性、打包上传 Steam 或批准游戏上线。
+
+## 先保留完整工程，再尝试
+
+每次有文件需要修改的 `apply` 都先创建独立的 **完整工程文件备份**，没有跳过备份开关。默认在工程旁的 `<工程名>.srg-backups/<时间编号>/`，也可用 GUI“备份位置…”或 CLI `--backup-dir` 选择工程外的目录。目录里是 `project/` 原文件副本和 `srg-project-backup.json` 校验清单。
+
+- 复制工程目录内全部普通文件、隐藏文件、`.git`、`.meta`、资源、配置、缓存、已有构建和空目录，不按 Git 忽略规则省略。工程大，备份和核验就需要相应空间与时间。
+- 源文件和副本均重新核验 SHA256；磁盘不足、文件占用、源文件变化、损坏或取消都会停止，INCOMPLETE 备份不能用于恢复。已完成备份不自动删除。
+- 点击“完整备份”可先单独备份；点击“恢复完整备份…”会核验后创建**新的工程副本**，保留当前工程。首次试用可先恢复副本，再对副本适配。
+- 这是工程根目录内的文件内容备份。工程外的本地依赖、玩家存档、引擎和系统环境不在范围内；链接/连接点直接拒绝，不能跳过后假称完整。文件所有者、ACL、NTFS 备用数据流和完整文件系统元数据不保证保留。操作前关闭编辑器和同步工具；不提供系统快照或硬件故障保证。
+
+```powershell
+python -m steam_release_guard backup 'D:/Games/MyGame' --backup-dir 'D:/PrivateBackups/MyGame' --dry-run --json
+python -m steam_release_guard backup 'D:/Games/MyGame' --backup-dir 'D:/PrivateBackups/MyGame' --yes --json
+# 将“时间编号”替换为上一条输出的实际 backup_path
+python -m steam_release_guard backup-verify 'D:/PrivateBackups/MyGame/时间编号' --json
+python -m steam_release_guard backup-restore 'D:/PrivateBackups/MyGame/时间编号' --output 'D:/Games/MyGame-Restored' --dry-run --json
+python -m steam_release_guard backup-restore 'D:/PrivateBackups/MyGame/时间编号' --output 'D:/Games/MyGame-Restored' --yes --json
+```
+
+恢复输出目录必须不存在；失败时保留部分输出和相邻的 `.srg-restore.json`，状态为 INCOMPLETE。检查原因后选择另一个新目录重试，不覆盖原工程。备份含源码、资源和可能的密钥，保持本地私有，不上传 GitHub 或 Steam。详见 [完整备份与恢复](workflows/backup.md)。
+
+测试范围与实物验证记录见 [完整备份验收](docs/FULL-BACKUP-VALIDATION-20261125.md)。
 
 ## 会做什么
 
@@ -116,7 +139,7 @@ Unreal 生成 `BuildCookRun -platform=Win64 -clientconfig=Shipping -serverconfig
 
 ## 恢复与测试
 
-每次适配先保存原文件并核对 SHA256，再写新内容；备份及事务记录在 `.steam-release-guard/backups/`。schema 2 包含状态、数量及日志校验，仍支持旧 schema 1 回滚。后续修改、日志/备份损坏会阻止恢复。写入失败保留日志，解决文件占用/空间不足后可重复 rollback。不要删除恢复目录或锁文件。
+每次有修改的适配先完成工程外的完整文件备份，再保存本次待修改文件的原件并核对 SHA256，最后写新内容。逐文件回滚备份及事务记录仍在 `.steam-release-guard/backups/`，并记录完整备份位置。schema 2 包含状态、数量及日志校验，仍支持旧 schema 1 回滚。后续修改、日志/备份损坏会阻止恢复。写入失败保留日志，解决文件占用/空间不足后可重复 rollback。不要删除恢复目录或锁文件。
 
 同一主机通过 OS 文件锁保守串行化写任务（包括未传工程参数的旧 stage 调用），另有工程锁。默认锁目录在系统临时目录的 `steam-release-guard-locks`；若需指定 D 盘位置，为本工具所有进程设置同一 `SRG_LOCK_DIRECTORY`。不要在操作过程中更换它。锁不阻止外部编辑器，也不支持跨主机/网络盘协调。进程退出后锁自动释放；磁盘预检不能排除复制过程中空间被其他程序耗尽。
 

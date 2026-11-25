@@ -4,4 +4,6 @@
 
 先核实项目目录、引擎精确版本，运行 plan 或 audit，说明修改范围并保留原工程。写操作需要已授权的具体范围；不擅自改密钥、删未知文件、上传源码/资源或上传 Steam。REVIEW 和 NOT_VERIFIED 不得改成 PASS。
 
+首次使用真实游戏先读 [完整备份与恢复](workflows/backup.md)，在恢复的新副本上尝试。apply 有文件变更时必须先成功完成工程外的完整文件备份与核验；不绕过该步骤、不上传备份、不强制覆盖恢复目标。
+
 修改本工具时保留 Python 3.10+ 标准库架构、旧 CLI/GUI/报告及回滚兼容性。执行 `python -m unittest discover -s tests -v`，不删除或削弱旧测试。P0 验收前不进入 P1—P4。仓库 AI 适配只维护 Markdown，不构建 AI 管理系统，不修改全局 AI 配置。

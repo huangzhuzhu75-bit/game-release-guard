@@ -2,6 +2,8 @@
 
 解压完整仓库，在仓库根目录打开你正在使用的 AI 工具。无需安装 Claude Code、Gemini CLI 或任何 AI 管理组件；本工具运行只需已有的 Python 3.10+，桌面界面另需 tkinter。
 
+首次试用先按 [完整备份与恢复](workflows/backup.md) 保留整个工程目录，并恢复新副本，在副本上尝试。apply 也会在修改前强制完成独立的完整备份与核验。
+
 复制下面这段话，把工程目录换成自己的真实目录：
 
 > 请先完整读取 `skills/steam-release-guard/SKILL.md`，再读取与我的引擎对应的 `workflows/unity-release.md` 或 `workflows/unreal-release.md`。我的游戏工程是【填写目录】，已打包构建是【填写目录，或写“尚未构建”】。先确认引擎版本，运行 plan 或 audit，解释修改范围、备份和未验证事项。未经我授权不要修改配置、密钥、删除文件、上传源码/资源或上传 Steam。完成后给我检查结果，保留 REVIEW 和 NOT_VERIFIED。

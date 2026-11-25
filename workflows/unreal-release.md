@@ -11,7 +11,7 @@ python -m steam_release_guard audit 'D:/Games/MyUnrealGame' --json
 python -m steam_release_guard apply 'D:/Games/MyUnrealGame' --dry-run --json
 ```
 
-3. 用户已授权后关闭编辑器，再适配：
+3. 首次试用先按 [完整备份与恢复](backup.md) 创建新的工程副本。用户已授权后关闭编辑器和同步工具，再适配；apply 会先完整备份工程到工程外并核验，失败就停止：
 
 ```powershell
 python -m steam_release_guard apply 'D:/Games/MyUnrealGame' --yes --json
