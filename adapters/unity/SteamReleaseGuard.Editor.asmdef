@@ -1,0 +1,7 @@
+{
+  "name": "SteamReleaseGuard.Editor",
+  "rootNamespace": "SteamReleaseGuard.Editor",
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true,
+  "noEngineReferences": false
+}

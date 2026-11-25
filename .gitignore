@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.local/
+.artifacts/
+.steam-release-guard/
+*.log
+*.bundle
+*.zip
+.env
+*.key
+*.pem
