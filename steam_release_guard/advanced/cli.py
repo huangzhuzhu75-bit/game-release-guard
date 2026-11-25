@@ -31,6 +31,22 @@ def add_parser(sub):
     verify.add_argument("--crypto-json", type=Path)
     verify.add_argument("--yes", action="store_true")
     verify.add_argument("--dry-run", action="store_true")
+    create = commands.add_parser("integrity-create", help="Create a release SHA256 manifest outside the build")
+    create.add_argument("build", type=Path)
+    create.add_argument("--build-id", required=True)
+    create.add_argument("--output", type=Path, required=True)
+    create.add_argument("--mutable", action="append", default=[])
+    create.add_argument("--yes", action="store_true")
+    create.add_argument("--dry-run", action="store_true")
+    integrity = commands.add_parser("integrity-verify", help="Check files against an externally pinned manifest")
+    integrity.add_argument("build", type=Path)
+    integrity.add_argument("--manifest", type=Path, required=True)
+    integrity.add_argument("--build-id", required=True)
+    integrity.add_argument("--expected-manifest-sha256", required=True)
+    drm = commands.add_parser("drm-inspect", help="Check retained original and wrapped PE; never upload")
+    drm.add_argument("--original", type=Path, required=True)
+    drm.add_argument("--wrapped", type=Path, required=True)
+    drm.add_argument("--expected-original-sha256", required=True)
     for name in ("unity-plan", "unity-apply", "unity-build"):
         cmd = commands.add_parser(name)
         cmd.add_argument("project", type=Path)
@@ -52,6 +68,8 @@ def add_parser(sub):
 
 def run(args, confirm, emit, operation):
     command = args.advanced_command
+    if command.startswith("integrity-") or command == "drm-inspect":
+        return run_integrity(args, confirm, emit, operation)
     project = c.detect_project(args.project)
     if command.startswith("unreal-") or command == "asset-plan":
         return run_unreal(args, project, confirm, emit, operation)
@@ -114,3 +132,18 @@ def run_unreal(args, project, confirm, emit, operation):
         return decision
     journal = unreal.apply(project, config, expected_plan=planned, backup_dir=args.backup_dir, operation=operation)
     return emit("APPLIED", {**preview, "journal": str(journal) if journal else None})
+
+
+def run_integrity(args, confirm, emit, operation):
+    from . import integrity
+    if args.advanced_command == "drm-inspect":
+        return emit("INSPECTED", integrity.drm_inspect(args.original, args.wrapped, args.expected_original_sha256))
+    if args.advanced_command == "integrity-verify":
+        record = integrity.verify(args.build, args.manifest, args.build_id, args.expected_manifest_sha256, operation=operation)
+        return emit(record["status"], record, code=2 if record["status"] == "INTEGRITY_MISMATCH" else 0)
+    preview = integrity.create_preview(args.build, args.build_id, args.output, args.mutable, operation=operation)
+    decision = confirm(args, preview)
+    if decision is not None:
+        return decision
+    return emit("CREATED", integrity.create(args.build, args.build_id, args.output, args.mutable,
+                                           operation=operation, expected_preview=preview))

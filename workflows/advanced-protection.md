@@ -55,3 +55,20 @@ python -m steam_release_guard advanced unreal-verify "D:/UECopy" --engine-root "
 `asset-plan` 对 Content 文件按显式路径规则分 A/B/C，缺规则和重复命中都标 REVIEW。分级不会自动创建 Chunk/PrimaryAssetLabel/AssetManager 或分配 secondary key。先在 Editor 审核依赖和加载关系后实现分块；全资源加密是全局开关，不能称为分级加密。分别评估 A 核心资源、B 普通资源、C 公开资源的收益，记录启动、加载、内存、补丁和 DLC 基线。
 
 回滚仍使用普通 `rollback`。关闭某一开关只写该项 false，含义是放弃相应加密/签名保护；不会删除 key。所有修改保持原 INI 编码、无关配置、注释与数组；后续编辑冲突会阻止回滚。
+
+## 版本文件完整性与 Steam Wrapper 产物
+
+最终完成构建、DRM/签名、符号分离后再为确切 depot 创建 SHA256 清单；更新后创建新 build-id 和新清单。预览不写文件，创建需要明确确认。默认包含所有文件，包括 EXE/DLL/资源/配置；只有显式 mutable 路径被排除。manifest 存在构建外，不能覆盖。
+
+```powershell
+python -m steam_release_guard advanced integrity-create "D:/Builds/Final-001" --build-id "release-001" --output "D:/Private/release-001.json" --mutable "Saved/*" --dry-run --json
+python -m steam_release_guard advanced integrity-create "D:/Builds/Final-001" --build-id "release-001" --output "D:/Private/release-001.json" --mutable "Saved/*" --yes --json
+python -m steam_release_guard advanced integrity-verify "D:/Builds/Final-001" --manifest "D:/Private/release-001.json" --build-id "release-001" --expected-manifest-sha256 "REPLACE_WITH_TRUSTED_64_HEX" --json
+python -m steam_release_guard advanced drm-inspect --original "D:/Private/original.exe" --wrapped "D:/Builds/Final-001/Game.exe" --expected-original-sha256 "REPLACE_WITH_PRE_WRAPPER_64_HEX" --json
+```
+
+把创建结果中的 manifest_sha256 固定到独立可信发布记录/CI/服务端，校验时传该值；不要从同一个可替换目录即时计算并当成信任依据。SHA256 清单不是数字签名，不防攻击者同时替换客户端验证器/清单。校验命令只读，报告改动、缺失、多出的文件。退出码 2 表示字节不符，不等于作弊或盗版。
+
+运行时研究结论：可由启动器在游戏未运行、更新已结束时调用 `steam_release_guard.advanced.integrity.verify`，或在现有游戏框架中实现等价标准 SHA256 校验；应异步/分批处理，实测大资源 IO 成本，避免逐帧全量散列。可信清单/签名和重要状态优先由服务端验证。本模块没有注入游戏、内核驱动、反调试、自动删除或封禁逻辑；尚未验证任何游戏内运行时集成。遇到异常提示 Steam 验证文件/修复，保留存档和允许的 mod；合法补丁暂停检查并原子更新基线，不把旧版本清单套到新游戏。
+
+原 `scripts/Invoke-SteamDrm.ps1` 保留原有上传明确确认。先独立记录原 EXE SHA256，再执行已授权 Wrapper。`drm-inspect` 检查原件未变、输出 PE 结构及差异，**不能单靠二进制变化证明 Wrapper 成功**。Wrapper 日志、Steam 启动、离线行为和测试分支重新安装全部需要真实验收；本模块不运行 EXE 或上传 Steam。

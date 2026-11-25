@@ -25,7 +25,7 @@ class ProtectionAdapter(ABC):
         raise NotImplementedError
 
 
-def read_json(path):
+def read_json(path, *, max_bytes=4 * 1024 * 1024):
     def pairs(items):
         result = {}
         for key, value in items:
@@ -35,7 +35,7 @@ def read_json(path):
         return result
     try:
         path = safe_path(path)
-        if path.stat().st_size > 4 * 1024 * 1024:
+        if path.stat().st_size > max_bytes:
             raise ValueError("oversized config")
         return json.loads(path.read_text(encoding="utf-8-sig"), object_pairs_hook=pairs,
                           parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite")))
