@@ -8,12 +8,14 @@ import json
 import os
 import re
 import shutil
+import stat
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
 from . import __version__
+from .operations import GuardError, Operation, serialized
 
 STATE = ".steam-release-guard"
 PACKAGING = "/Script/UnrealEd.ProjectPackagingSettings"
@@ -34,10 +36,6 @@ SOURCE_RULES = {
 }
 
 
-class GuardError(Exception):
-    """An actionable input, compatibility or recovery error."""
-
-
 @dataclass(frozen=True)
 class Project:
     root: Path
@@ -51,6 +49,7 @@ class Change:
     path: str
     data: bytes
     purpose: str
+    before_sha256: str | None = None
 
 
 def utc_now() -> str:
@@ -70,7 +69,12 @@ def file_digest(path: Path) -> str:
 
 
 def linked(path: Path) -> bool:
-    return path.is_symlink() or (hasattr(path, "is_junction") and path.is_junction())
+    # Python 3.10 has no is_junction(); include Windows reparse points there too.
+    try:
+        info = path.lstat()
+        return stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & 0x400)
+    except FileNotFoundError:
+        return False
 
 
 def local_path(root: Path, relative: str) -> Path:
@@ -87,8 +91,16 @@ def local_path(root: Path, relative: str) -> Path:
     return current
 
 
+def absolute_path(value: str | Path) -> Path:
+    path = Path(value).expanduser().resolve()
+    if os.name == "nt" and not str(path).startswith("\\\\?\\"):
+        text = str(path)
+        path = Path("\\\\?\\UNC\\" + text[2:] if text.startswith("\\\\") else "\\\\?\\" + text)
+    return path
+
+
 def detect_project(value: str | Path) -> Project:
-    candidate = Path(value).expanduser().resolve()
+    candidate = absolute_path(value)
     chosen = candidate if candidate.suffix.lower() == ".uproject" and candidate.is_file() else None
     root = chosen.parent if chosen else candidate
     if not root.is_dir():
@@ -187,8 +199,16 @@ def valid_crypto_key(data: bytes) -> bool:
 
 def plan(project: Project, encrypt_index: bool = False) -> list[Change]:
     require_supported(project)
+    originals = {}
+
+    def original(relative):
+        if relative not in originals:
+            path = local_path(project.root, relative)
+            originals[relative] = path.read_bytes() if path.exists() else None
+        return originals[relative] or b""
+
     changes = []
-    ignore_data = read_optional(project.root, ".gitignore")
+    ignore_data = original(".gitignore")
     ignore_text, ignore_encoding = decode_config(ignore_data)
     if f"/{STATE}/" not in ignore_text.splitlines() and f"{STATE}/" not in ignore_text.splitlines():
         newline = "\r\n" if "\r\n" in ignore_text else "\n"
@@ -205,12 +225,12 @@ def plan(project: Project, encrypt_index: bool = False) -> list[Change]:
                               "Keep the build adapter Editor-only"))
     else:
         game = "Config/DefaultGame.ini"
-        changes.append(Change(game, patch_ini(read_optional(project.root, game), PACKAGING, {
+        changes.append(Change(game, patch_ini(original(game), PACKAGING, {
             "BuildConfiguration": "PPBC_Shipping", "IncludeDebugFiles": "False",
         }), "Set Shipping and exclude debug files from the staged build"))
         if encrypt_index:
             crypto_path = "Config/DefaultCrypto.ini"
-            crypto = read_optional(project.root, crypto_path)
+            crypto = original(crypto_path)
             if not valid_crypto_key(crypto):
                 raise GuardError("Generate a nonzero 256-bit key in Unreal Project Settings > Encryption first. No changes applied.")
             changes.append(Change(game, patch_ini(changes[-1].data, PACKAGING, {"UsePakFile": "True"}),
@@ -218,14 +238,26 @@ def plan(project: Project, encrypt_index: bool = False) -> list[Change]:
             changes.append(Change(crypto_path, patch_ini(crypto, CRYPTO, {"bEncryptPakIndex": "True"}),
                                   "Encrypt the Pak index using the existing key; not asset contents"))
     unique = {change.path: change for change in changes}
-    return [change for change in unique.values() if read_optional(project.root, change.path) != change.data]
+    result = []
+    for change in unique.values():
+        before = original(change.path)
+        if before != change.data:
+            saved = originals[change.path]
+            result.append(Change(change.path, change.data, change.purpose, digest(saved) if saved is not None else None))
+    return result
 
 
 def atomic_write(path: Path, data: bytes) -> None:
+    if any(linked(p) for p in (path, *path.parents)):
+        raise GuardError("Write path must not contain symlinks or junctions.")
+    path = absolute_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".srg-" + uuid.uuid4().hex + ".tmp")
     try:
-        temporary.write_bytes(data)
+        with temporary.open("xb") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
         os.replace(temporary, path)
     finally:
         if temporary.exists():
@@ -236,85 +268,17 @@ def write_json(path: Path, value: dict) -> None:
     atomic_write(path, (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
 
 
-def apply(project: Project, encrypt_index: bool = False) -> Path | None:
-    changes = plan(project, encrypt_index)
-    if not changes:
-        return None
-    transaction_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ") + "-" + uuid.uuid4().hex[:8]
-    folder = local_path(project.root, f"{STATE}/backups/{transaction_id}")
-    atomic_write(local_path(project.root, f"{STATE}/.gitignore"), b"*\n")
-    entries = []
-    # Prepare and verify ALL originals before touching a project file.
-    for number, change in enumerate(changes):
-        target = local_path(project.root, change.path)
-        before = target.read_bytes() if target.exists() else None
-        backup_name = f"{number:03d}.bak" if before is not None else None
-        if before is not None:
-            atomic_write(folder / backup_name, before)
-            if file_digest(folder / backup_name) != digest(before):
-                raise GuardError("Backup verification failed; project has not been changed.")
-        entries.append({"path": change.path, "before_sha256": digest(before) if before is not None else None,
-                        "after_sha256": digest(change.data), "backup": backup_name})
-    journal = {"schema": 1, "root": str(project.root), "created_utc": utc_now(), "status": "prepared", "files": entries}
-    manifest = folder / "manifest.json"
-    write_json(manifest, journal)
-    try:
-        for change, entry in zip(changes, entries):
-            target = local_path(project.root, change.path)
-            actual = file_digest(target) if target.exists() else None
-            if actual != entry["before_sha256"]:
-                raise GuardError(f"File changed during planning: {change.path}")
-            atomic_write(target, change.data)
-            if file_digest(target) != entry["after_sha256"]:
-                raise GuardError(f"Write verification failed: {change.path}")
-        journal["status"] = "applied"
-        write_json(manifest, journal)
-    except (OSError, GuardError):
-        # Keep the prepared journal for conflict-aware recovery; never hide a failed transaction.
-        raise GuardError(f"Apply interrupted. Close the editor and run rollback. Recovery: {manifest}") from None
-    return manifest
+def apply(project: Project, encrypt_index: bool = False, **kwargs) -> Path | None:
+    from .transactions import apply as execute
+    return execute(project, encrypt_index, **kwargs)
 
 
-def rollback(project: Project) -> Path:
-    backup_root = local_path(project.root, f"{STATE}/backups")
-    if not backup_root.is_dir():
-        raise GuardError("No release-guard backup exists for this project.")
-    for folder in sorted(backup_root.iterdir(), reverse=True):
-        manifest = local_path(project.root, str(folder.relative_to(project.root) / "manifest.json"))
-        if not manifest.is_file():
-            continue
-        journal = json.loads(manifest.read_text(encoding="utf-8"))
-        if journal.get("status") == "rolled_back":
-            continue
-        if journal.get("schema") != 1 or journal.get("root") != str(project.root):
-            raise GuardError("Backup belongs to a different project or schema. No files restored.")
-        prepared = []
-        for entry in journal["files"]:
-            target = local_path(project.root, entry["path"])
-            current = file_digest(target) if target.exists() else None
-            if current not in (entry["before_sha256"], entry["after_sha256"]):
-                raise GuardError(f"Rollback conflict: {entry['path']} changed after adaptation. No files restored.")
-            before = None
-            if entry["before_sha256"] is not None:
-                backup = local_path(folder, entry["backup"])
-                before = backup.read_bytes()
-                if digest(before) != entry["before_sha256"]:
-                    raise GuardError("Backup integrity check failed. No files restored.")
-            prepared.append((target, before))
-        for target, before in reversed(prepared):
-            if before is None:
-                if target.exists():
-                    target.unlink()
-            else:
-                atomic_write(target, before)
-        journal["status"] = "rolled_back"
-        journal["restored_utc"] = utc_now()
-        write_json(manifest, journal)
-        return manifest
-    raise GuardError("All recorded changes have already been rolled back.")
+def rollback(project: Project, **kwargs) -> Path:
+    from .transactions import rollback as execute
+    return execute(project, **kwargs)
 
 
-def walk_files(root: Path, excluded: set[str] | None = None):
+def walk_files(root: Path, excluded: set[str] | None = None, operation: Operation | None = None):
     """Never follow symlinks/junctions or silently ignore unreadable directories."""
     excluded = {item.casefold() for item in (excluded or set())}
 
@@ -322,6 +286,8 @@ def walk_files(root: Path, excluded: set[str] | None = None):
         raise GuardError(f"Cannot fully inspect directory: {error.filename}")
 
     for base, directories, filenames in os.walk(root, followlinks=False, onerror=on_error):
+        if operation:
+            operation.check_cancel()
         directories.sort()
         filenames.sort()
         for directory in list(directories):
@@ -330,6 +296,8 @@ def walk_files(root: Path, excluded: set[str] | None = None):
             elif linked(Path(base) / directory):
                 raise GuardError("Inspection is incomplete: a directory is a symlink/junction.")
         for filename in filenames:
+            if operation:
+                operation.check_cancel()
             path = Path(base) / filename
             if linked(path):
                 raise GuardError("Inspection is incomplete: a file is a symlink.")
@@ -342,13 +310,13 @@ def private_symbol(relative: Path) -> bool:
         or "_burstdebuginformation_donotship" in part.lower() for part in relative.parts)
 
 
-def source_candidates(project: Project) -> list[dict]:
+def source_candidates(project: Project, operation: Operation | None = None) -> list[dict]:
     roots = [project.root / "Assets"] if project.engine == "unity" else [project.root / p for p in ("Source", "Plugins", "Config")]
     results = []
     for root in roots:
         if not root.is_dir():
             continue
-        for path in walk_files(root, {".git", STATE, "Library", "Intermediate", "Binaries", "Editor", "node_modules"}):
+        for path in walk_files(root, {".git", STATE, "Library", "Intermediate", "Binaries", "Editor", "node_modules"}, operation):
             if path.suffix.lower() not in SOURCE_EXTENSIONS | {".ini"}:
                 continue
             if path.stat().st_size > 2_000_000:
@@ -356,6 +324,8 @@ def source_candidates(project: Project) -> list[dict]:
                 continue
             text = path.read_text(encoding="utf-8-sig", errors="replace")
             for number, line in enumerate(text.splitlines(), 1):
+                if operation and number % 100 == 0:
+                    operation.check_cancel()
                 for name, pattern in SOURCE_RULES.items():
                     if pattern.search(line):
                         # Do not put code, credentials or config values in reports.
@@ -363,12 +333,21 @@ def source_candidates(project: Project) -> list[dict]:
     return results
 
 
-def audit(project: Project, build: Path | None = None) -> dict:
+@serialized
+def audit(project: Project, build: Path | None = None, *, operation: Operation | None = None) -> dict:
+    from .transactions import pending
+    from .staging import MARKER
     findings = []
+    op = operation or Operation()
+    op.step("checking configuration", 0, 3)
 
     def add(rule, status, category, title, detail, evidence=None):
         findings.append({"id": rule, "status": status, "category": category, "title": title,
                          "detail": detail, "evidence": evidence or []})
+
+    if pending(project):
+        add("INCOMPLETE_PROJECT_TRANSACTION", "fail", "recovery", "Incomplete or damaged project transaction",
+            "Preserve recovery records and resolve rollback before release.")
 
     try:
         require_supported(project)
@@ -408,7 +387,7 @@ def audit(project: Project, build: Path | None = None) -> dict:
         config = project.root / "Config"
         overrides = []
         if config.is_dir():
-            for path in walk_files(config):
+            for path in walk_files(config, operation=op):
                 if path.suffix.lower() == ".ini" and path != config / "DefaultGame.ini":
                     values = ini_values(path.read_bytes(), PACKAGING)
                     if any(key in values for key in ("buildconfiguration", "includedebugfiles", "usepakfile", "buseiostore")):
@@ -416,22 +395,35 @@ def audit(project: Project, build: Path | None = None) -> dict:
         if overrides:
             add("UE_CONFIG_LAYERS", "review", "configuration", "Other packaging config layers found",
                 "Platform configuration, launch profiles and command-line flags can override defaults. Inspect the actual Shipping build.", overrides)
-    candidates = source_candidates(project)
+    op.step("inspecting debug candidates", 1, 3)
+    candidates = source_candidates(project, op)
     if candidates:
         add("DEBUG_SOURCE_CANDIDATES", "warn", "debug", "Potential developer commands",
             "Heuristic matches only: comments and correctly guarded code can match. Binary plugins and Blueprints are not analyzed. Review each location and test the packaged game.", candidates)
     add("RUNTIME_DEBUG_REVIEW", "review", "debug", "Run the actual release build",
         "Try test menus, cheat consoles, level skipping and developer shortcuts. A clean text scan cannot establish their absence, including in Blueprints, scenes, prefabs and plugins.")
     inventory = {}
+    op.step("inspecting packaged files", 2, 3)
     if build is None:
         add("BUILD_REQUIRED", "review", "artifact", "No packaged build supplied", "Select the exact Steam depot content folder for post-build inspection.")
     else:
-        build = build.expanduser().resolve()
+        build = absolute_path(build)
         if not build.is_dir():
             raise GuardError("The packaged build folder does not exist.")
         if build == project.root or project.root.is_relative_to(build):
             raise GuardError("Select a packaged build folder, not the source project or its parent.")
-        files = list(walk_files(build))
+        marker = build / MARKER
+        if marker.exists():
+            try:
+                staged = json.loads(marker.read_text(encoding="utf-8"))
+                complete = (staged.get("schema") == 2 and staged.get("operation") == "stage"
+                            and staged.get("status") == "COMPLETE")
+            except (ValueError, AttributeError):
+                complete = False
+            if not complete:
+                add("INCOMPLETE_STAGE", "fail", "recovery", "Staging did not complete",
+                    "Do not upload this directory. Preserve the private journal and use stage-cleanup or manual recovery.")
+        files = list(walk_files(build, operation=op))
         relative = [path.relative_to(build) for path in files]
         names = [path.as_posix() for path in relative]
         inventory = {"file_count": len(files), "bytes": sum(path.stat().st_size for path in files)}
@@ -469,6 +461,7 @@ def audit(project: Project, build: Path | None = None) -> dict:
                 ("GameAssembly.dll and IL2CPP metadata are present. Native code and metadata can still be reverse engineered." if native and metadata else "Could not establish an IL2CPP layout. Check the actual build and adapter log."), managed)
             debug_boot = []
             for path in files:
+                op.check_cancel()
                 if path.name.lower() == "boot.config":
                     text = path.read_text(encoding="utf-8-sig", errors="replace")
                     if re.search(r"(?mi)^\s*(player-connection-debug|wait-for-managed-debugger|profiler-enable|development)\s*=\s*(1|true)\s*$", text):
@@ -488,6 +481,7 @@ def audit(project: Project, build: Path | None = None) -> dict:
     add("PLAYER_COMPATIBILITY", "review", "runtime", "Compatibility and paying-player checks",
         "Retest plugins, old/new saves, multiplayer, offline startup, Steam restart behavior, controllers, loading time and patch size using the distributed build.")
     failed = sum(f["status"] == "fail" for f in findings)
+    op.step("audit completed", 3, 3)
     return {"schema": 1, "tool_version": __version__, "created_utc": utc_now(), "engine": project.engine,
             "engine_version": project.version, "project_name": project.root.name, "inventory": inventory,
             "automated_gate": "failed" if failed else "no_detected_blocker",
@@ -495,7 +489,7 @@ def audit(project: Project, build: Path | None = None) -> dict:
 
 
 def validate_report_directory(directory: Path) -> Path:
-    directory = directory.expanduser().resolve()
+    directory = absolute_path(directory)
     if directory.exists():
         if not directory.is_dir():
             raise GuardError("Report output must be a directory.")
@@ -505,6 +499,7 @@ def validate_report_directory(directory: Path) -> Path:
     return directory
 
 
+@serialized
 def save_report(report: dict, directory: Path) -> Path:
     directory = validate_report_directory(directory)
     directory.mkdir(parents=True, exist_ok=True)
@@ -528,44 +523,14 @@ def save_report(report: dict, directory: Path) -> Path:
     return directory / "report.html"
 
 
-def stage_release(build: Path, destination: Path, symbols: Path) -> dict:
-    paths = [p.expanduser().resolve() for p in (build, destination, symbols)]
-    build, destination, symbols = paths
-    if not build.is_dir():
-        raise GuardError("Build folder does not exist.")
-    for i, path in enumerate(paths):
-        for other in paths[i + 1:]:
-            if path == other or path.is_relative_to(other) or other.is_relative_to(path):
-                raise GuardError("Build, release and private-symbol folders must be disjoint, not nested.")
-    for folder in (destination, symbols):
-        if folder.exists() and (not folder.is_dir() or any(folder.iterdir())):
-            raise GuardError("Release and private-symbol folders must be new or empty. Existing builds are never overwritten.")
-    files = list(walk_files(build))
-    if not files:
-        raise GuardError("Cannot stage an empty build.")
-    entries = []
-    for path in files:
-        relative = path.relative_to(build)
-        if any(part.casefold() in {".git", STATE} for part in relative.parts):
-            raise GuardError("Build contains source-control/private-state data; select only packaged content.")
-    for folder in (destination, symbols):
-        folder.mkdir(parents=True, exist_ok=True)
-    for path in files:
-        relative = path.relative_to(build)
-        private = private_symbol(relative)
-        target = local_path(symbols if private else destination, relative.as_posix())
-        target.parent.mkdir(parents=True, exist_ok=True)
-        before = file_digest(path)
-        shutil.copy2(path, target)
-        if file_digest(target) != before or file_digest(path) != before:
-            raise GuardError("Build changed during copy; staging is incomplete. Keep the original and rerun into new folders.")
-        entries.append({"path": relative.as_posix(), "sha256": before, "location": "private_symbols" if private else "release"})
-    manifest = {"schema": 1, "created_utc": utc_now(), "files": entries, "originals_untouched": True}
-    write_json(symbols / "srg-symbol-manifest.json", manifest)
-    return manifest
+def stage_release(build: Path, destination: Path, symbols: Path, **kwargs) -> dict:
+    from .staging import stage_release as execute
+    return execute(build, destination, symbols, **kwargs)
 
 
 def powershell_literal(value: str) -> str:
+    # Extended paths are for our filesystem I/O, not external engine/batch arguments.
+    value = value.replace("\\\\?\\UNC\\", "\\\\").replace("\\\\?\\", "")
     # Batch files ultimately use cmd.exe on Windows. Reject shell expansion characters there.
     if re.search(r'[\r\n"&|<>^%!]', value):
         raise GuardError("Build command paths must not contain shell metacharacters (including %, !, &, quotes or newlines).")
@@ -574,7 +539,7 @@ def powershell_literal(value: str) -> str:
 
 def build_script(project: Project, tool: Path, output: Path) -> str:
     require_supported(project)
-    tool, output = tool.expanduser().resolve(), output.expanduser().resolve()
+    tool, output = absolute_path(tool), absolute_path(output)
     if not tool.is_file():
         raise GuardError("Choose the installed Unity.exe or Unreal Engine/Build/BatchFiles/RunUAT.bat.")
     if output == project.root or project.root.is_relative_to(output):

@@ -10,7 +10,9 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from .core import (STATE, GuardError, apply, audit, atomic_write, build_script, detect_project,
-                   rollback, save_report, stage_release)
+                   plan, rollback, save_report, stage_release)
+from .operations import Operation, safe_error, writer
+from .transactions import rollback_preview
 
 
 class App:
@@ -23,6 +25,9 @@ class App:
         self.report_path = None
         self.events = queue.Queue()
         self.busy = False
+        self.operation = None
+        self.closing = False
+        root.protocol("WM_DELETE_WINDOW", self.close)
         root.title("Steam Release Guard · 发布加固助手")
         root.geometry("1050x800")
         root.minsize(920, 690)
@@ -65,6 +70,12 @@ class App:
             button.pack(side="left", padx=(0, 8))
             self.buttons.append(button)
         ttk.Label(frame, textvariable=self.status, wraplength=940).pack(anchor="w", pady=(4, 10))
+        progress_row = ttk.Frame(frame)
+        progress_row.pack(fill="x", pady=(0, 8))
+        self.progress = ttk.Progressbar(progress_row, maximum=100)
+        self.progress.pack(side="left", fill="x", expand=True)
+        self.cancel_button = ttk.Button(progress_row, text="取消", command=self.cancel, state="disabled")
+        self.cancel_button.pack(side="right", padx=(8, 0))
         box = ttk.Frame(frame)
         box.pack(fill="both", expand=True)
         self.log = tk.Text(box, bg="#172235", fg="#dce8f5", insertbackground="white", relief="flat", padx=16, pady=14,
@@ -75,7 +86,12 @@ class App:
         self.log.pack(fill="both", expand=True)
         self.write("Unity 6：安装仅在 Editor 中使用的 IL2CPP / 非开发构建入口。\nUnreal 5：配置 Shipping，并排除发布包调试文件。\n\n适配不会自动构建、上传 Steam、生成密钥或声称无法盗版。\n构建完成后，选择实际发布包再次检查，并进行实机验收。")
         ttk.Label(frame, text="备份位于工程内 .steam-release-guard；建议关闭引擎编辑器后适配。", style="Hint.TLabel").pack(anchor="w", pady=(12, 0))
-        root.after(100, self.poll)
+        self.poll_id = root.after(100, self.poll)
+        root.bind("<Destroy>", self.on_destroy, add="+")
+
+    def on_destroy(self, event):
+        if event.widget is self.root:
+            self.root.after_cancel(self.poll_id)
 
     def path_row(self, parent, label, variable):
         ttk.Label(parent, text=label).pack(anchor="w", pady=(4, 4))
@@ -99,6 +115,9 @@ class App:
         if self.busy:
             return
         self.busy = True
+        self.report_path = None
+        self.operation = Operation(lambda event: self.events.put(("progress", event)))
+        self.cancel_button.configure(state="normal")
         self.status.set("正在本地处理…")
         for button in self.buttons:
             button.configure(state="disabled")
@@ -107,41 +126,76 @@ class App:
             try:
                 result = work()
                 self.events.put(("done", result))
-            except (GuardError, OSError, ValueError) as error:
-                self.events.put(("error", str(error)))
+            except BaseException as error:
+                self.events.put(("error", safe_error(error)))
 
-        threading.Thread(target=worker, daemon=True).start()
+        threading.Thread(target=worker, daemon=False).start()
+
+    def cancel(self):
+        if self.busy and self.operation and self.operation.cancellable:
+            self.operation.cancel.set()
+            self.status.set("已请求取消；等待当前校验完成，保留原文件和恢复记录。")
+
+    def close(self):
+        if not self.busy:
+            self.root.destroy()
+            return
+        self.closing = True
+        self.cancel()
+        if self.operation and not self.operation.cancellable:
+            self.status.set("当前正在提交，不能取消。完成恢复记录后关闭窗口。")
 
     def run(self, operation):
         project_text, build_text, encrypt = self.project.get().strip(), self.build.get().strip(), self.encrypt.get()
         if not project_text:
             messagebox.showinfo("选择工程", "请先选择 Unity 或 Unreal 的工程根目录。")
             return
+        try:
+            preview = None
+            if operation == "apply":
+                project = detect_project(project_text)
+                preview = plan(project, encrypt)
+                summary = "\n".join(f"• {c.path}: {c.purpose}" for c in preview) or "配置已存在；仅更新检查报告。"
+                if not messagebox.askyesno("确认适配范围", f"{project.engine} {project.version}\n{summary}\n\n先核验备份，写入阶段不可取消。继续？"):
+                    return
+        except Exception as error:
+            messagebox.showerror("无法预览", safe_error(error))
+            return
 
         def work():
             project = detect_project(project_text)
             build = Path(build_text) if build_text else None
             if build:
-                audit(project, build)  # Reject invalid artifact input before mutation.
+                audit(project, build, operation=self.operation)  # Reject invalid artifact input before mutation.
             description = []
             if operation == "apply":
-                manifest = apply(project, encrypt)
+                manifest = apply(project, encrypt, operation=self.operation, expected_plan=preview)
                 description.append(f"适配已写入，恢复记录：{manifest}" if manifest else "适配已存在，无需重复修改。")
-            report = audit(project, build)
+            self.operation.step("检查工程和发布包", cancellable=operation != "apply")
+            report = audit(project, build, operation=self.operation if operation == "audit" else None)
+            self.operation.step("保存检查报告", cancellable=False)
             path = save_report(report, project.root / STATE / "reports" / datetime.now().strftime("%Y%m%d-%H%M%S-%f"))
             for finding in report["findings"]:
                 description.append(f"[{finding['status'].upper()}] {finding['title']}\n  {finding['detail']}")
             return ("发现需要修复的发布问题。" if report["automated_gate"] == "failed" else "自动检查完成；仍需实机与 Steam 测试分支验收。", "\n".join(description), path)
 
-        self.start_worker(work)
+        def locked_work():
+            with writer():
+                return work()
+        self.start_worker(locked_work)
 
     def restore(self):
         value = self.project.get().strip()
         if not value:
             messagebox.showinfo("选择工程", "请先选择工程。")
             return
-        if messagebox.askyesno("恢复最近适配", "恢复最近一次适配前的文件？如果文件已被后来修改，工具会停止以保留你的修改。"):
-            self.start_worker(lambda: ("已回滚；重新检查以更新报告。", str(rollback(detect_project(value))), None))
+        try:
+            project = detect_project(value)
+            preview = rollback_preview(project)
+            if messagebox.askyesno("恢复最近适配", "将恢复：\n" + "\n".join(preview["files"]) + "\n\n后续修改会阻止回滚。写入阶段不可取消。继续？"):
+                self.start_worker(lambda: ("已回滚；重新检查以更新报告。", str(rollback(project, operation=self.operation, expected_preview=preview)), None))
+        except Exception as error:
+            messagebox.showerror("无法预览回滚", safe_error(error))
 
     def open_report(self):
         if self.report_path:
@@ -162,10 +216,15 @@ class App:
                 return
             script = build_script(project, Path(tool), Path(output))
             target = project.root / STATE / ("build-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".ps1")
-            atomic_write(target, script.encode("utf-8-sig"))
+            if not messagebox.askyesno("保存构建脚本", f"保存到：{target}\n引擎：{tool}\n输出：{output}\n只保存，不运行。继续？"):
+                return
+            with writer(project):
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with target.open("xb") as handle:
+                    handle.write(script.encode("utf-8-sig"))
             self.write(f"构建脚本已生成（尚未运行）：{target}\n在 PowerShell 中运行该文件；引擎、许可证、Windows 构建工具需已就绪。")
-        except (GuardError, OSError, ValueError) as error:
-            messagebox.showerror("无法生成构建脚本", str(error))
+        except Exception as error:
+            messagebox.showerror("无法生成构建脚本", safe_error(error))
 
     def stage(self):
         value = self.build.get().strip()
@@ -178,20 +237,28 @@ class App:
         symbols = filedialog.askdirectory(title="选择空的私有符号目录（不要上传 Steam）")
         if not symbols:
             return
+        if not messagebox.askyesno("确认暂存范围", f"原构建：{value}\n发布副本：{release}\n私有符号：{symbols}\n\n复制全部构建文件，按符号规则分离；原文件保留，目标必须为空。继续？"):
+            return
 
         def work():
-            result = stage_release(Path(value), Path(release), Path(symbols))
+            result = stage_release(Path(value), Path(release), Path(symbols), operation=self.operation)
             return ("复制校验完成；请对新的发布目录再次检查。", f"已复制并校验 {len(result['files'])} 个文件。原始文件保留。\n发布目录：{release}\n私有符号目录：{symbols}", None)
 
         self.start_worker(work)
 
     def poll(self):
-        try:
-            kind, value = self.events.get_nowait()
-        except queue.Empty:
-            pass
-        else:
+        for _ in range(100):
+            try:
+                kind, value = self.events.get_nowait()
+            except queue.Empty:
+                break
+            if kind == "progress":
+                self.progress["value"] = 100 * value["current"] / max(1, value["total"])
+                self.status.set(f"{value['phase']} ({value['current']}/{value['total']})" + ("" if value["cancellable"] else " · 当前阶段不可取消"))
+                self.cancel_button.configure(state="normal" if value["cancellable"] else "disabled")
+                continue
             self.busy = False
+            self.cancel_button.configure(state="disabled")
             for button in self.buttons:
                 button.configure(state="normal")
             if kind == "error":
@@ -202,7 +269,10 @@ class App:
                 self.status.set(status)
                 self.write("\n" + text)
                 self.report_path = report
-        self.root.after(100, self.poll)
+        if self.closing and not self.busy:
+            self.root.destroy()
+            return
+        self.poll_id = self.root.after(100, self.poll)
 
 
 def launch():

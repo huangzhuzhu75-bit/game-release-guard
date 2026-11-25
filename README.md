@@ -4,13 +4,19 @@
 
 本地桌面界面 + 无第三方 Python 依赖的 CLI。分别检查代码可读性、开发调试入口和资源暴露，生成 HTML / JSON 报告。不会联网扫描工程、收集遥测或上传游戏。
 
-这是一套发布加固与检查工具，不是反盗版保证、资源加密壳或反作弊系统。`v0.1.0` 是待真实项目验收的首版；完整引擎打包和 Steam 测试分支结果见 [验证记录](docs/VALIDATION.md)。
+这是一套发布加固与检查工具，不是反盗版保证、资源加密壳或反作弊系统。当前 `0.2.0.dev0` 是 **V2 P0 验收候选**，在 v0.1.0 上补强事务稳定性，保留 CLI、GUI 和报告。P1—P4 尚未实施；完整引擎打包和 Steam 测试分支结果仍需真实项目验收。
+
+## 下载后让 AI 直接读
+
+打开 **[AI-START.md](AI-START.md)**，复制其中的提示词，填写你的工程目录即可。统一说明在 **[skills/steam-release-guard/SKILL.md](skills/steam-release-guard/SKILL.md)**；不必安装任何 AI 工具或全局 Skill。
+
+项目提供 `AGENTS.md`、`CLAUDE.md`、`GEMINI.md` 入口和四份工作流：[Unity](workflows/unity-release.md)、[Unreal](workflows/unreal-release.md)、[安全与发布包检查](workflows/security-audit.md)、[回滚](workflows/rollback.md)。不支持原生 Skills 的工具直接阅读 Markdown；没有 AI 管理服务、工具扫描/安装、MCP/ACP/Hooks 管理器或全局配置修改。未安装客户端的实际读取不标为已验证。
 
 ## 双击使用
 
 1. 下载并解压仓库；本机需有 **Python 3.10+，含 tkinter**。无需 `pip install`，无需管理员权限。引擎构建另需原工程对应的引擎、许可证和 Windows 构建组件。
 2. 双击 **`Launch.cmd`**。如果自动寻找 Python 失败，把已有 `python.exe` 的完整路径写入 `.local/python-path.txt`，或设置进程环境变量 `SRG_PYTHON`。工具不会自行下载 Python。
-3. 选择工程根目录，点击 **一键适配**。先点击“检查”或运行 `plan` 可预览范围。建议先关闭 Unity / Unreal 编辑器。
+3. 选择工程根目录，先点击“检查”或运行 `plan`。点击 **一键适配** 后审阅文件范围，再确认；建议先关闭 Unity / Unreal 编辑器。
 4. 通过“生成引擎构建脚本…”生成并运行对应版本的构建命令；Unity 也可直接使用新增的菜单入口。选择实际发布包，再执行检查。
 5. 如需分离符号，选择三个互不嵌套的目录：原构建、空发布目录、空私有符号目录。复制并校验后，对新发布目录重新检查。
 
@@ -55,21 +61,22 @@
 # 只预览文件清单；不创建状态目录，不写工程
 python -m steam_release_guard plan 'D:/Games/MyGame'
 
-# 一键适配并生成报告
-python -m steam_release_guard apply 'D:/Games/MyGame'
+# 先预览；确认本次范围后才使用 --yes 写入
+python -m steam_release_guard apply 'D:/Games/MyGame' --dry-run --json
+python -m steam_release_guard apply 'D:/Games/MyGame' --yes --json
 
 # Unreal 可选索引加密；必须先在引擎内建立有效密钥
-python -m steam_release_guard apply 'D:/Games/MyGame' --encrypt-pak-index
+python -m steam_release_guard apply 'D:/Games/MyGame' --encrypt-pak-index --dry-run --json
 
 # 检查实际 Steam depot 内容目录
 python -m steam_release_guard audit 'D:/Games/MyGame' --build 'D:/Builds/MyGame-v1'
 
 # 私有符号单独归档，保留原始构建；不会自动删除其他可疑文件
 python -m steam_release_guard stage 'D:/Builds/MyGame-v1' `
-  --release 'D:/Release/MyGame-v1' --symbols 'D:/PrivateSymbols/MyGame-v1'
+  --release 'D:/Release/MyGame-v1' --symbols 'D:/PrivateSymbols/MyGame-v1' --dry-run --json
 
 # 回滚最近一次未回滚的适配
-python -m steam_release_guard rollback 'D:/Games/MyGame'
+python -m steam_release_guard rollback 'D:/Games/MyGame' --dry-run --json
 ```
 
 构建脚本只生成、不执行；使用原项目准确版本的 `Unity.exe` 或 `RunUAT.bat`：
@@ -77,12 +84,14 @@ python -m steam_release_guard rollback 'D:/Games/MyGame'
 ```powershell
 python -m steam_release_guard build-script 'D:/Games/MyGame' `
   --tool 'D:/Engines/Unity/Editor/Unity.exe' `
-  --output 'D:/Builds/MyGame-v2' --save 'D:/Builds/build-my-game-v2.ps1'
+  --output 'D:/Builds/MyGame-v2' --save 'D:/Builds/build-my-game-v2.ps1' --dry-run --json
 ```
 
 Unreal 生成 `BuildCookRun -platform=Win64 -clientconfig=Shipping -serverconfig=Shipping -nodebuginfo` 等参数；现有 `bUseIoStore=True` 时增加 `-iostore`。不要用历史 Development 产物填入新构建目录。脚本路径拒绝 `% ! & | < > ^` 等批处理特殊字符，支持空格、中文和单引号。
 
-退出码：`0` = 操作完成且未检出自动阻断项；`1` = 输入、文件、版本或操作错误；`2` = 检查检出阻断项（适配本身可能已经保存）。`audit --fail-on-warnings` 也会将候选风险作为 CI 失败。
+写操作预览后，用户明确授权才将 `--dry-run` 换为 `--yes` 执行。不加两者时，交互终端询问；非交互/JSON 模式返回 `CONFIRMATION_REQUIRED`。`--json` 输出单个结果对象，`--progress` 向 stderr 输出阶段事件，GUI 同步提供进度和取消按钮。备份/复制阶段可取消，项目写入、回滚和最终提交阶段不可取消。
+
+退出码：`0` = 完成或预览；`1` = 操作错误；`2` = 自动检查阻断（适配可能已保存）；`3` = 尚未确认；`130` = 取消。`audit --fail-on-warnings` 也将候选风险作为 CI 失败。
 
 **退出码 0 不代表可上线。** 没提供发布包时是工程检查；所有报告保留 `REQUIRES_MANUAL_REVIEW` 或 `BLOCKED`，不会把缺失的实机证据算作通过。`review` 是需要人工验证，`warn` 是需要判断的候选问题，`fail` 是已检出的发布阻断项。
 
@@ -107,7 +116,17 @@ Unreal 生成 `BuildCookRun -platform=Win64 -clientconfig=Shipping -serverconfig
 
 ## 恢复与测试
 
-每次适配先保存原文件并核对 SHA256，再写新内容；备份及事务记录在 `.steam-release-guard/backups/`。原文件不存在时，回滚只删除工具创建的对应文件。遇到后续人工修改或备份损坏，整批恢复在改写前停止。断途中断后可运行 `rollback` 处理 prepared 事务；不要删除恢复目录。
+每次适配先保存原文件并核对 SHA256，再写新内容；备份及事务记录在 `.steam-release-guard/backups/`。schema 2 包含状态、数量及日志校验，仍支持旧 schema 1 回滚。后续修改、日志/备份损坏会阻止恢复。写入失败保留日志，解决文件占用/空间不足后可重复 rollback。不要删除恢复目录或锁文件。
+
+同一主机通过 OS 文件锁保守串行化写任务（包括未传工程参数的旧 stage 调用），另有工程锁。默认锁目录在系统临时目录的 `steam-release-guard-locks`；若需指定 D 盘位置，为本工具所有进程设置同一 `SRG_LOCK_DIRECTORY`。不要在操作过程中更换它。锁不阻止外部编辑器，也不支持跨主机/网络盘协调。进程退出后锁自动释放；磁盘预检不能排除复制过程中空间被其他程序耗尽。
+
+stage 使用独立事务；发布目录 `.srg-stage.json` 只有完成后才为 COMPLETE，失败为 INCOMPLETE 并阻断 audit。私有目录保存 `srg-stage-journal.json`。安全清理只删除经核验的失败副本，保留原构建、未知文件与恢复日志：
+
+```powershell
+python -m steam_release_guard stage-cleanup 'D:/PrivateSymbols/MyGame-v1/srg-stage-journal.json' --dry-run --json
+```
+
+授权清理范围后换为 `--yes`。本版不提供续传。stage 提交副本使用同卷硬链接避免覆盖，输出文件系统需支持硬链接（例如 NTFS）；不支持时会安全失败。初始记录尚未落盘就发生写满/断电，可能需要人工处理空目录或临时记录；不保证硬件断电恢复。SHA256 用于校验意外损坏，不是防恶意篡改签名。
 
 回滚保留本地恢复记录，以及 Unity 后来生成的目录 / `.meta` 文件。不要将 `.steam-release-guard` 复制进 Steam depot；它包含私有工程备份。工具不为用户工程自动执行 Git 提交。
 
@@ -120,6 +139,6 @@ python -m compileall -q steam_release_guard
 
 GitHub Actions 覆盖 Windows / Linux、Python 3.10 / 3.12 的工具测试，不含 Unity / Unreal 许可证、引擎下载、游戏构建或 Steam 凭据。
 
-更多：[发布人工验收表](docs/RELEASE-CHECKLIST.md) · [来源与复用评估](docs/SOURCES.md) · [验证记录](docs/VALIDATION.md) · [安全边界](SECURITY.md)
+更多：[P0 实施前审查](docs/V2-P0-REVIEW.md) · [P0 验证记录](docs/V2-P0-VALIDATION.md) · [发布人工验收表](docs/RELEASE-CHECKLIST.md) · [来源与复用评估](docs/SOURCES.md) · [v0.1 验证记录](docs/VALIDATION.md) · [安全边界](SECURITY.md)
 
 MIT License。Unity、Unreal、Steam 为各自权利人的商标，本项目与其无隶属关系。

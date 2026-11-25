@@ -5,10 +5,34 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 @unittest.skipUnless(os.name == "nt" or os.environ.get("DISPLAY"), "Desktop display required")
 class GuiTests(unittest.TestCase):
+    def test_unexpected_worker_failure_restores_controls_without_leaking_message(self):
+        import tkinter as tk
+        from steam_release_guard.gui import App
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            app = App(root)
+
+            def fail():
+                raise RuntimeError("private-password-must-not-be-logged")
+            app.start_worker(fail)
+            deadline = time.monotonic() + 10
+            while app.busy and time.monotonic() < deadline:
+                root.update()
+                time.sleep(.01)
+            self.assertFalse(app.busy)
+            self.assertTrue(all(str(button["state"]) == "normal" for button in app.buttons))
+            self.assertEqual(str(app.cancel_button["state"]), "disabled")
+            self.assertIn("RuntimeError", app.log.get("1.0", "end"))
+            self.assertNotIn("private-password", app.log.get("1.0", "end"))
+        finally:
+            root.destroy()
+
     def test_adapt_callback_finishes_and_produces_review_report(self):
         import tkinter as tk
         from steam_release_guard.gui import App
@@ -21,7 +45,8 @@ class GuiTests(unittest.TestCase):
             try:
                 app = App(root)
                 app.project.set(str(project))
-                app.run("apply")
+                with mock.patch("steam_release_guard.gui.messagebox.askyesno", return_value=True):
+                    app.run("apply")
                 deadline = time.monotonic() + 15
                 while app.busy and time.monotonic() < deadline:
                     root.update()
