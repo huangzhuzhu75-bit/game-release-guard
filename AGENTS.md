@@ -6,4 +6,4 @@
 
 首次使用真实游戏先读 [完整备份与恢复](workflows/backup.md)，在恢复的新副本上尝试。apply 有文件变更时必须先成功完成工程外的完整文件备份与核验；不绕过该步骤、不上传备份、不强制覆盖恢复目标。
 
-修改本工具时保留 Python 3.10+ 标准库架构、旧 CLI/GUI/报告及回滚兼容性。执行 `python -m unittest discover -s tests -v`，不删除或削弱旧测试。P0 验收前不进入 P1—P4。仓库 AI 适配只维护 Markdown，不构建 AI 管理系统，不修改全局 AI 配置。
+修改本工具时保留 Python 3.10+ 标准库架构、旧 CLI/GUI/报告及回滚兼容性。执行 `python -m unittest discover -s tests -v`，不删除或削弱旧测试。用户在 2026-11-25 明确授权独立 P3 分支开发，并允许在缺少 UE/许可证/实机条件时将真实引擎验收记为 NOT_VERIFIED；这不等于 P0 已批准合并。高级操作先读 [P3 工作流](workflows/advanced-protection.md) 与对应实际代码。仓库 AI 适配只维护 Markdown，不构建 AI 管理系统，不修改全局 AI 配置。

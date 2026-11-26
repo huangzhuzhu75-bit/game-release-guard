@@ -1,0 +1,11 @@
+{
+  "schema": 2,
+  "engine_version": "5.6",
+  "pak": {"index": true, "ini": true, "uasset": false, "all_assets": false, "signing": false},
+  "container_policy": "pak+iostore",
+  "assets": [
+    {"path": "Content/Core/*", "grade": "A", "loading": "streamed"},
+    {"path": "Content/Ordinary/*", "grade": "B", "loading": "streamed"},
+    {"path": "Content/Public/*", "grade": "C", "loading": "public"}
+  ]
+}

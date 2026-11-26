@@ -57,6 +57,8 @@ def parser() -> argparse.ArgumentParser:
     restore = sub.add_parser("backup-restore", help="Restore full backup into a NEW directory; never overwrite")
     restore.add_argument("backup", type=Path)
     restore.add_argument("--output", type=Path, required=True, help="A new project directory that does not exist")
+    from .advanced.cli import add_parser
+    add_parser(sub)
     for name, command in sub.choices.items():
         command.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
         command.add_argument("--progress", action="store_true", help="Write phase progress to stderr")
@@ -102,6 +104,9 @@ def main(argv=None) -> int:
     try:
         args = parser().parse_args(raw)
         command = args.command
+        if command == "advanced":
+            from .advanced.cli import run
+            return run(args, confirm, emit, Operation())
         if command == "gui":
             if json_mode:
                 raise GuardError("gui does not support JSON mode; use a CLI command.")

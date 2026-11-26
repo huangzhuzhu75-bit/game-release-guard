@@ -67,32 +67,34 @@ def pending(project):
 
 
 def apply(project, encrypt_index=False, *, operation=None, expected_plan=None, backup_dir=None,
-          expected_backup_preview=None):
+          expected_backup_preview=None, planner=None):
     from . import project_backup
-    c.plan(project, encrypt_index)
+    make_plan = planner or (lambda: c.plan(project, encrypt_index))
+    make_plan()
     op = operation or Operation()
     # Full snapshot precedes even the project lock/state-directory writes.
     with writer():
         if pending(project):
             raise GuardError("An incomplete project transaction needs rollback before a new apply.")
-        changes = c.plan(project, encrypt_index)
+        changes = make_plan()
         if expected_plan is not None and changes != expected_plan:
             raise GuardError("Project changed after the preview. Review a fresh plan before applying.")
         if not changes:
             return None
         full = project_backup.create(project, backup_dir, operation=op, expected_preview=expected_backup_preview)
         op.check_cancel()
-        return _apply(project, encrypt_index, operation=op, expected_plan=changes, full_backup=full)
+        return _apply(project, encrypt_index, operation=op, expected_plan=changes, full_backup=full, planner=make_plan)
 
 
-def _apply(project, encrypt_index=False, *, operation=None, expected_plan=None, full_backup=None):
+def _apply(project, encrypt_index=False, *, operation=None, expected_plan=None, full_backup=None, planner=None):
     # Invalid versions/keys must not even create a project state directory.
-    c.plan(project, encrypt_index)
+    make_plan = planner or (lambda: c.plan(project, encrypt_index))
+    make_plan()
     op = operation or Operation()
     with writer(project):
         if pending(project):
             raise GuardError("An incomplete project transaction needs rollback before a new apply.")
-        changes = c.plan(project, encrypt_index)
+        changes = make_plan()
         if expected_plan is not None and changes != expected_plan:
             raise GuardError("Project changed after the preview. Review a fresh plan before applying.")
         if not changes:

@@ -75,7 +75,7 @@ Skill 是对 AI 的操作指引，不是权限隔离或防泄漏执行器；仍�
 | --- | --- |
 | Shipping | 面向发行的编译配置，通常裁掉多种开发调试能力；不是反逆向或自定义后门清除器。核对 Packaging、平台 INI、Target/Build.cs、Launch Profile/UAT 覆盖、真实日志及运行入口。 |
 | Pak | `.pak` 打包容器本身不保密。`Encrypt Pak Index` 保护索引，不等于音频/模型/纹理主体已加密。需要已有合法密钥及真正构建证据，不能从一个 INI 布尔值直接声称防提取。 |
-| IoStore | `.utoc`/`.ucas` 是另一套容器布局；`bUseIoStore=True` 仅表示配置意图。按引擎版本、构建参数和容器标志核对实际加密/签名及加载。Pak 索引开关不能证明 IoStore 内容受保护；本版 Release Guard 无 IoStore 加密适配。 |
+| IoStore | `.utoc`/`.ucas` 是另一套容器布局；`bUseIoStore=True` 仅表示配置意图。按引擎版本、构建参数和容器标志核对实际加密/签名及加载。Pak 索引开关不能证明 IoStore 内容受保护；Release Guard P3 候选提供独立官方工具检查入口，实际加密/签名与运行仍需验证。 |
 | UAsset / Cook | Cook 转换成目标平台可用数据，并可能去掉编辑器数据，不能推断所有内容不可分析。`Encrypt UAsset Files` 在 Pak 场景主要保护相关包头/字符串信息，不能推断全部 bulk data 加密；结合 `.uexp`/`.ubulk` 或 IoStore 的实际布局判断。 |
 | INI 加密 | `Encrypt Pak Ini Files` 针对被放入 Pak 的 INI，不能保护源码目录、散装配置、日志或客户端内存中的秘密。配置合并/平台覆盖可能改变结果，须检查最终产物。 |
 | Pak 签名 | 用于检测篡改和验证受信来源，提供完整性而非保密。签名私钥留构建/签名环境，客户端可有公钥；核对目标版本运行时确实验证/拒绝错误签名。不是防资源读取或服务端反作弊。 |
@@ -110,7 +110,9 @@ Skill 是对 AI 的操作指引，不是权限隔离或防泄漏执行器；仍�
 
 独立 Skill 不包含 CLI。需要调用工具时，定位用户实际下载的 Steam Release Guard，读取其 `README.md`、对应 `workflows/*.md` 和实际实现：`steam_release_guard/cli.py`（参数/副作用）、`core.py`、相关 `gui.py`、`project_backup.py`、`transactions.py` 或 `staging.py`。再查看本地 `--help`。文件或命令不存在就停止那项调用，不能创造命令、远程下载执行或自动安装依赖。
 
-以下是仓库 **0.2.0.dev0 / V2 P0 候选**的已知行为；新版本以本地代码为准。它使用 Python 3.10+ 标准库，GUI 另需 tkinter，仅自动适配 Unity 6 / UE5 Windows 基础发布配置。未提供混淆、字符串/metadata 加固、IoStore 加密、后端改写或 SteamPipe 自动发布。
+以下是仓库 **0.2.0.dev0 / V2 P0 + P3 候选**的已知行为；新版本以本地代码为准。它使用 Python 3.10+ 标准库，GUI 另需 tkinter，适配 Unity 6 / UE5 Windows 基础发布配置。P3 另有 `advanced` CLI：Obfuz 4.0.0 显式名单符号混淆适配、UE 独立 CryptoKeys 配置与 Pak/IoStore 工具检查、文件完整性、只读客户端风险检查和三层验收。真实游戏保护效果未验证；字符串/控制流暂拒绝启用，没有 metadata 加密、自动资源分块、后端改写或 SteamPipe 自动发布。P0 尚未批准合并。
+
+只有确实需要 P3 时，读取 `workflows/advanced-protection.md`、`steam_release_guard/advanced/cli.py` 和对应实现，再核对本地 `advanced --help`。高级只读检查默认只输出对话结果；构建/配置写入需要相应授权和预览，Unity 引擎执行只允许完整备份恢复的新副本。缺工具或版本不符就说明原因，不代为安装。文件完整性匹配不是防破解证明；验收中的 RECORDED_PASS 只是用户声明和证据文件哈希匹配，不能当独立实机验收。
 
 | 命令/GUI 动作 | 副作用与适用边界 |
 | --- | --- |
