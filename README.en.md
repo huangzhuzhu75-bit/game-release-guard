@@ -71,22 +71,49 @@ Replace `BACKUP_ID` with the directory name returned by the backup operation. Re
 </details>
 
 <a id="ai-skill"></a>
-## Install the AI Skill
+## AI Skill: use your preferred assistant
 
-The only canonical knowledge file is [skills/steam-release-guard/SKILL.md](skills/steam-release-guard/SKILL.md). Download it independently and keep its [LICENSE](skills/steam-release-guard/LICENSE) when distributing it. The core text is currently Chinese; installation instructions are available in both languages. It does not depend on the Python toolkit, introduce an AI backend or change global configuration.
+**One Skill. One prompt.** Every AI button below opens the same universal instructions. Use the same approach with other assistants that can read Markdown.
 
-| AI tool | Project-level installation path | Actual verification |
-|---|---|---|
-| OpenAI Codex | `.agents/skills/steam-release-guard/SKILL.md` | **Tested**: native reading and 4 synthetic scenarios, not a real-game security certification. |
-| Claude Code | `.claude/skills/steam-release-guard/SKILL.md` | **Not Verified**: documented official format; client execution has not been tested. |
-| Gemini CLI | `.gemini/skills/steam-release-guard/SKILL.md` | **Not Verified**: documented official format; client execution has not been tested. |
-| Other Markdown / Skills tools | A project documentation directory | Markdown fallback only; native discovery and client behavior have not been verified. |
+<p>
+  <a href="#use-with-ai"><img src="docs/assets/agents/deepseek.svg" width="144" height="34" alt="DeepSeek" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/claude-code.svg" width="144" height="34" alt="Claude Code" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/codex.svg" width="144" height="34" alt="OpenAI Codex" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/workbuddy.svg" width="144" height="34" alt="WorkBuddy" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/opencode.svg" width="144" height="34" alt="OpenCode" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/hermes.svg" width="144" height="34" alt="Hermes" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/antigravity.svg" width="144" height="34" alt="Antigravity" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/gemini.svg" width="144" height="34" alt="Gemini CLI" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/grok-build.svg" width="144" height="34" alt="Grok Build" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/kimi.svg" width="144" height="34" alt="Kimi CLI" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/cursor.svg" width="144" height="34" alt="Cursor" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/qwen.svg" width="144" height="34" alt="Qwen Code" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/qoder.svg" width="144" height="34" alt="Qoder CLI" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/copilot.svg" width="144" height="34" alt="GitHub Copilot" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/pi.svg" width="144" height="34" alt="Pi" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/kiro.svg" width="144" height="34" alt="Kiro CLI" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/kilo.svg" width="144" height="34" alt="Kilo" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/mistral-vibe.svg" width="144" height="34" alt="Mistral Vibe" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/reasonix.svg" width="144" height="34" alt="Reasonix" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/aider.svg" width="144" height="34" alt="Aider" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/devin.svg" width="144" height="34" alt="Devin" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/trae.svg" width="144" height="34" alt="Trae" /></a>
+</p>
 
-Preserve existing instructions and do not overwrite a same-named file. Ask the assistant to identify the file it actually read. Without installation, use a prompt such as:
+<a id="use-with-ai"></a>
+### Copy this to your AI
 
-> Read the specified SKILL.md in full and check the project and engine version first. For an existing project, describe file locations, risks and recommendations in this conversation only. Do not edit files, create reports or upload source code. Mark protection you cannot verify as NOT_VERIFIED.
+```text
+Read README.en.md and skills/steam-release-guard/SKILL.md at https://github.com/huangzhuzhu75-bit/steam-release-guard. Set up and use this Skill for my current game project.
+If you support native Skills, use your current client's project-level installation method; otherwise read and follow the Markdown directly. Keep LICENSE and existing instructions. Do not overwrite same-named files, change global configuration or install extra software.
+Briefly state the source you read or the path you saved, then wait for my development or review task. Installing the Skill does not authorize game edits, builds, reports or project uploads.
+```
 
-[中文安装](skills/steam-release-guard/INSTALL.md) · [English installation](skills/steam-release-guard/INSTALL.en.md) · [Usage examples](skills/steam-release-guard/EXAMPLES.md) · [Platform evidence](docs/SKILL-VALIDATION-20261125.md)
+**Or download it directly:** [Standalone Skill ZIP](https://github.com/huangzhuzhu75-bit/steam-release-guard/raw/refs/heads/main/downloads/steam-release-guard-skill.zip) · [SKILL.md](skills/steam-release-guard/SKILL.md) · [LICENSE](skills/steam-release-guard/LICENSE)
+
+The ZIP contains only the same Skill, its license and bilingual guides. No Python required. If your assistant cannot open the link, extract the ZIP and give it `SKILL.md` to read. The core text is currently Chinese; ask the assistant to respond in your preferred language.
+
+[中文使用说明](skills/steam-release-guard/INSTALL.md) · [English guide](skills/steam-release-guard/INSTALL.en.md) · [Example prompts](skills/steam-release-guard/EXAMPLES.en.md)
 
 ## Unity capabilities
 
@@ -161,7 +188,8 @@ adapters/                   Unity / Obfuz Editor bridges
 skills/steam-release-guard/  One Skill, installation, examples, license
 workflows/                  Backup, engines, inspection, rollback
 docs/                       Sources, validation, detailed usage
-scripts/                    Launcher, API checks, explicit Steam DRM
+downloads/                  Standalone Skill ZIP (no toolkit required)
+scripts/                    Launcher, API checks, Skill packaging, Steam DRM
 tests/                      Behavioral, recovery and documentation tests
 ```
 

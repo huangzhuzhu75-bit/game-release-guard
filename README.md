@@ -71,22 +71,49 @@ python -m steam_release_guard advanced --help
 </details>
 
 <a id="ai-skill"></a>
-## AI Skill 安装
+## AI Skill：交给你常用的 AI
 
-唯一核心是 [skills/steam-release-guard/SKILL.md](skills/steam-release-guard/SKILL.md)，可独立下载，分发时保留同目录 [LICENSE](skills/steam-release-guard/LICENSE)。核心正文目前为中文，安装入口提供中英文。不依赖 Python 工具，不建立 AI 后台，不修改全局配置。
+**同一份 Skill，同一个提示词。** 点击下方任意 AI 入口，跳到通用使用方式；其他能读取 Markdown 的助手也走相同流程。
 
-| AI 工具 | 项目级安装路径 | 实际验证状态 |
-|---|---|---|
-| OpenAI Codex | `.agents/skills/steam-release-guard/SKILL.md` | **Tested**：原生读取和 4 个合成场景，不是实际游戏安全认证。 |
-| Claude Code | `.claude/skills/steam-release-guard/SKILL.md` | **Not Verified**：按官方格式提供说明，未实测客户端。 |
-| Gemini CLI | `.gemini/skills/steam-release-guard/SKILL.md` | **Not Verified**：按官方格式提供说明，未实测客户端。 |
-| 其他 Markdown / Skills 工具 | 项目内文档目录 | 提供 Markdown 兼容方案，未验证原生发现或客户端行为。 |
+<p>
+  <a href="#use-with-ai"><img src="docs/assets/agents/deepseek.svg" width="144" height="34" alt="DeepSeek" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/claude-code.svg" width="144" height="34" alt="Claude Code" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/codex.svg" width="144" height="34" alt="OpenAI Codex" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/workbuddy.svg" width="144" height="34" alt="WorkBuddy" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/opencode.svg" width="144" height="34" alt="OpenCode" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/hermes.svg" width="144" height="34" alt="Hermes" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/antigravity.svg" width="144" height="34" alt="Antigravity" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/gemini.svg" width="144" height="34" alt="Gemini CLI" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/grok-build.svg" width="144" height="34" alt="Grok Build" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/kimi.svg" width="144" height="34" alt="Kimi CLI" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/cursor.svg" width="144" height="34" alt="Cursor" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/qwen.svg" width="144" height="34" alt="Qwen Code" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/qoder.svg" width="144" height="34" alt="Qoder CLI" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/copilot.svg" width="144" height="34" alt="GitHub Copilot" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/pi.svg" width="144" height="34" alt="Pi" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/kiro.svg" width="144" height="34" alt="Kiro CLI" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/kilo.svg" width="144" height="34" alt="Kilo" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/mistral-vibe.svg" width="144" height="34" alt="Mistral Vibe" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/reasonix.svg" width="144" height="34" alt="Reasonix" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/aider.svg" width="144" height="34" alt="Aider" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/devin.svg" width="144" height="34" alt="Devin" /></a>
+  <a href="#use-with-ai"><img src="docs/assets/agents/trae.svg" width="144" height="34" alt="Trae" /></a>
+</p>
 
-保留已有指令，勿覆盖同名文件。让 AI 先说出实际读取路径；也可以不安装，直接要求：
+<a id="use-with-ai"></a>
+### 复制给 AI
 
-> 完整阅读指定的 SKILL.md，先核对工程和引擎版本。检查已有工程时，只在对话中说明文件位置、风险和建议；不修改、不生成报告、不上传源码。无法核实的保护标为 NOT_VERIFIED。
+```text
+请读取 https://github.com/huangzhuzhu75-bit/steam-release-guard 的 README.md 和 skills/steam-release-guard/SKILL.md，为当前游戏项目安装并使用这份 Skill。
+如果你支持原生 Skill，按当前客户端的项目级方式安装；否则直接读取 Markdown 并遵循。保留 LICENSE 和已有指令，不覆盖同名文件，不修改全局配置，不安装额外软件。
+完成后简短说明实际读取或保存的位置，等待我的开发或检查任务。不要因为安装 Skill 就修改游戏、运行构建、生成报告或上传工程。
+```
 
-[中文安装](skills/steam-release-guard/INSTALL.md) · [English installation](skills/steam-release-guard/INSTALL.en.md) · [使用示例](skills/steam-release-guard/EXAMPLES.md) · [平台验收](docs/SKILL-VALIDATION-20261125.md)
+**也可以直接下载：** [独立 Skill ZIP](https://github.com/huangzhuzhu75-bit/steam-release-guard/raw/refs/heads/main/downloads/steam-release-guard-skill.zip) · [SKILL.md](skills/steam-release-guard/SKILL.md) · [LICENSE](skills/steam-release-guard/LICENSE)
+
+ZIP 只含同一份 Skill、许可和中英文使用说明，无需 Python。AI 无法打开链接时，解压后把 `SKILL.md` 交给它阅读即可。核心正文目前为中文，可要求 AI 用你的语言回复。
+
+[中文使用说明](skills/steam-release-guard/INSTALL.md) · [English guide](skills/steam-release-guard/INSTALL.en.md) · [提示词示例](skills/steam-release-guard/EXAMPLES.md)
 
 ## Unity 功能
 
@@ -161,7 +188,8 @@ adapters/                   Unity / Obfuz Editor bridges
 skills/steam-release-guard/  One Skill, installation, examples, license
 workflows/                  Backup, engines, inspection, rollback
 docs/                       Sources, validation, detailed usage
-scripts/                    Launcher, API checks, explicit Steam DRM
+downloads/                  Standalone Skill ZIP (no toolkit required)
+scripts/                    Launcher, API checks, Skill packaging, Steam DRM
 tests/                      Behavioral, recovery and documentation tests
 ```
 

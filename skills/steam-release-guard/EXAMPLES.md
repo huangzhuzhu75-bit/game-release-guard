@@ -1,3 +1,5 @@
+[简体中文](EXAMPLES.md) | [English](EXAMPLES.en.md)
+
 # 使用示例
 
 先按 [INSTALL.md](INSTALL.md) 安装或指定 [SKILL.md](SKILL.md) 的真实路径。下面是可直接改路径使用的提示词；不是宣称已在你的游戏上执行。检查默认只在对话中回复，后续修改需要对应授权。
@@ -31,3 +33,5 @@
 > 我另有 Steam Release Guard 仓库 D:/Tools/steam-release-guard。请先读取它的 README、CLI 和备份实现，核对实际命令；只对 D:/Games/MyGame-Copy 做 plan，解释完整备份、适配与报告的范围。先不要 apply。
 
 应看到：只读预览与工具版本；说明 apply 会先完整备份且写报告，rollback 只回滚工具修改，完整恢复创建新目录。不虚构 protect-all、steam-upload 或 audit --no-report 命令，不上传游戏。
+
+[简体中文](EXAMPLES.md) | [English](EXAMPLES.en.md)

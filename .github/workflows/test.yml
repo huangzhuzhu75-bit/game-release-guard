@@ -18,6 +18,8 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Compile Python modules
         run: python -m compileall -q steam_release_guard
+      - name: Verify standalone Skill download
+        run: python scripts/package_skill.py --check
       - name: Parse PowerShell entry points
         if: runner.os == 'Windows'
         shell: pwsh
