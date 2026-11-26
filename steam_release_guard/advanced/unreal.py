@@ -8,16 +8,17 @@ import re
 from pathlib import Path
 
 from .. import core as c, transactions
-from ..operations import GuardError, writer
+from ..operations import Cancelled, GuardError, writer
 from ..project_backup import safe_path, disjoint, relative_name
-from .common import ProtectionAdapter, changes, finding, new_output, private_run, read_json, result, shape
+from .common import ProtectionAdapter, changes, finding, new_output, private_run, read_json, shape
 
 FLAGS = {"index": "bEncryptPakIndex", "ini": "bEncryptPakIniFiles", "uasset": "bEncryptUAssetFiles",
          "all_assets": "bEncryptAllAssetFiles", "signing": "bEnablePakSigning"}
+CONTAINERS = {"pak-only": (True, False), "iostore-only": (False, True), "pak+iostore": (True, True)}
 
 
 def version_matches(project, exact):
-    return bool(re.fullmatch(r"5\.[0-6](?:\.\d+)?", exact)) and (exact == project.version or exact.startswith(project.version + "."))
+    return isinstance(exact, str) and bool(re.fullmatch(r"5\.[0-6](?:\.\d+)?", exact)) and (exact == project.version or exact.startswith(project.version + "."))
 
 
 def signing_shape(values):
@@ -33,12 +34,18 @@ def signing_shape(values):
 
 
 def validate(project, config):
-    shape(config, {"schema", "engine_version", "pak", "iostore", "assets"})
-    if project.engine != "unreal" or config["schema"] != 1 or not version_matches(project, config["engine_version"]):
+    if isinstance(config, dict) and config.get("schema") == 1:
+        raise GuardError("UE policy schema 1 does not explicitly select Pak. Review and migrate to schema 2 with container_policy: pak-only, iostore-only or pak+iostore; no automatic conversion or changes.")
+    shape(config, {"schema", "engine_version", "pak", "container_policy", "assets"})
+    if project.engine != "unreal" or type(config["schema"]) is not int or config["schema"] != 2 or not version_matches(project, config["engine_version"]):
         raise GuardError("Reviewed UE 5.0–5.6 settings profile must match the project version; other versions need review.")
     shape(config["pak"], FLAGS)
-    if type(config["iostore"]) is not bool or any(type(v) is not bool for v in config["pak"].values()):
-        raise GuardError("Each Pak/IoStore option must be an explicit boolean.")
+    if not isinstance(config["container_policy"], str) or config["container_policy"] not in CONTAINERS:
+        raise GuardError("Explicitly select container_policy: pak-only, iostore-only or pak+iostore.")
+    if config["container_policy"] == "iostore-only":
+        raise GuardError("IoStore-only is NOT_VERIFIED for this Windows/UAT profile. Official Zen Loader staging also uses companion Pak files; no validated standalone combination is available. No files changed and Pak will not be enabled automatically.")
+    if any(type(v) is not bool for v in config["pak"].values()):
+        raise GuardError("Each CryptoKeys option must be an explicit boolean.")
     crypto_bytes = c.read_optional(project.root, "Config/DefaultCrypto.ini")
     crypto = c.ini_values(crypto_bytes, c.CRYPTO)
     if any(config["pak"][k] for k in ("index", "ini", "uasset", "all_assets")) and not c.valid_crypto_key(crypto_bytes):
@@ -58,35 +65,57 @@ def validate(project, config):
 
 class UnrealAdapter(ProtectionAdapter):
     def detect(self, project, tool_path=None):
+        # IoStoreUtilities is an official Developer module hosted by UnrealPak,
+        # not a documented standalone IoStoreUtilities.exe. Detect entry points
+        # independently; module help must confirm capabilities before execution.
+        tools = {"pak": {"module": "PakFileUtilities", "prefix": []},
+                 "iostore": {"module": "IoStoreUtilities", "prefix": ["IoStore"]}}
+        record = {"status": "NOT_VERIFIED", "tools": tools, "runtime": "NOT_VERIFIED"}
+        def unavailable(reason):
+            for entry in tools.values():
+                entry.update(status="NOT_VERIFIED", reason=reason)
+            record["reason"] = reason
+            return record
         if tool_path is None:
-            return {"status": "MISSING", "reason": "Provide the exact UE installation root; nothing is installed automatically."}
+            return unavailable("Provide the exact UE installation root; nothing is installed automatically.")
         root = safe_path(tool_path)
         version_file = root / "Engine/Build/Build.version"
         if not version_file.is_file():
-            raise GuardError("Engine/Build/Build.version not found in the selected UE installation.")
-        data = read_json(version_file)
+            return unavailable("Engine/Build/Build.version is missing; neither tool version can be established.")
         try:
-            version = ".".join(str(data[k]) for k in ("MajorVersion", "MinorVersion", "PatchVersion"))
-        except (KeyError, TypeError):
-            raise GuardError("Invalid UE Build.version.") from None
-        if not version_matches(project, version):
-            raise GuardError("UE tool installation version does not match the reviewed project profile.")
+            data = read_json(version_file)
+            numbers = [data[k] for k in ("MajorVersion", "MinorVersion", "PatchVersion")]
+            if any(type(n) is not int or n < 0 for n in numbers):
+                return unavailable("Invalid UE Build.version components.")
+        except (GuardError, KeyError, TypeError):
+            return unavailable("Cannot establish the tool version from Build.version.")
+        version = ".".join(map(str, numbers))
+        record.update(version=version, version_file_sha256=c.file_digest(version_file))
+        if project.engine != "unreal" or not version_matches(project, version):
+            return unavailable("UE installation version is unsupported or does not match the project; no tools executed.")
         tool = root / "Engine/Binaries/Win64/UnrealPak.exe"
         if not tool.is_file():
-            raise GuardError("Matching official UnrealPak.exe is missing; do not substitute an unreviewed external unpacker.")
-        return {"status": "DETECTED", "version": version, "tool": str(safe_path(tool)), "tool_sha256": c.file_digest(tool),
-                "version_file_sha256": c.file_digest(version_file), "runtime": "NOT_VERIFIED"}
+            return unavailable("Matching official UnrealPak host is missing. A DLL or undocumented IoStoreUtilities.exe is not a verified CLI substitute.")
+        for entry in tools.values():
+            entry.update(status="DETECTED", executable=str(safe_path(tool)), tool_sha256=c.file_digest(tool),
+                         version=version, capability="NOT_VERIFIED")
+        # Only the 5.6 keyword-list/CSV interface has been reviewed here.
+        if numbers[:2] != [5, 6]:
+            tools["iostore"].update(status="NOT_VERIFIED", reason="IoStoreUtilities command profile is reviewed for UE 5.6 only; this version needs its own documentation/help review.")
+        record["status"] = "DETECTED"
+        return record
 
     def plan(self, project, config):
         validate(project, config)
         # Reuse only baseline .gitignore. Compose each INI once to avoid duplicate targets.
         values = [(x.path, x.data, x.purpose) for x in c.plan(project) if x.path == ".gitignore"]
+        pak, iostore = CONTAINERS[config["container_policy"]]
         game = c.patch_ini(c.read_optional(project.root, "Config/DefaultGame.ini"), c.PACKAGING,
-                           {"BuildConfiguration": "PPBC_Shipping", "IncludeDebugFiles": "False", "UsePakFile": "True",
-                            "bUseIoStore": str(config["iostore"])})
+                           {"BuildConfiguration": "PPBC_Shipping", "IncludeDebugFiles": "False", "UsePakFile": str(pak),
+                            "bUseIoStore": str(iostore)})
         crypto = c.patch_ini(c.read_optional(project.root, "Config/DefaultCrypto.ini"), c.CRYPTO,
                              {FLAGS[k]: str(v) for k, v in config["pak"].items()})
-        values += [("Config/DefaultGame.ini", game, "Shipping packaging; explicit IoStore choice"),
+        values += [("Config/DefaultGame.ini", game, "Shipping packaging; explicit " + config["container_policy"] + " choice"),
                    ("Config/DefaultCrypto.ini", crypto, "Independent CryptoKeys switches; preserve existing key bytes/values")]
         return changes(project, values)
 
@@ -142,11 +171,83 @@ def verify_preview(project, engine_root, build, evidence_dir, crypto_json=None):
             "scope": "Official read/test commands on actual containers; logs are private. No extraction, packaging or key changes."}
 
 
+def _supports(help_text, flag, *, value=False):
+    suffix = r"\s*=" if value else r"(?![A-Za-z0-9_-])"
+    return re.search(r"(?<![A-Za-z0-9_-])" + re.escape(flag) + suffix, help_text, re.IGNORECASE) is not None
+
+
+def _verify_group(kind, entry, items, build, folder, crypto_json, secrets, operation):
+    group = {"kind": kind, "module": entry["module"], "status": "NOT_VERIFIED", "checks": [],
+             "entrypoint": entry, "protection": "NOT_VERIFIED", "runtime": "NOT_VERIFIED"}
+    if not items:
+        group.update(status="NOT_REQUESTED", reason="No containers of this kind in the selected build.")
+        return group
+    if entry["status"] != "DETECTED":
+        group["reason"] = entry["reason"]
+        return group
+    tool, prefix = entry["executable"], entry["prefix"]
+    help_dir = folder / "help"
+    help_dir.mkdir()
+    try:
+        group["help"] = private_run([tool, *prefix, "-Help"], help_dir, secrets=secrets, operation=operation)
+    except Cancelled:
+        raise
+    except (GuardError, OSError):
+        group.update(status="FAIL", reason="Tool help could not execute; preserve its private log.")
+        return group
+    if group["help"]["exit_code"] != 0:
+        group["reason"] = "This entry point did not accept its help request; command compatibility is NOT_VERIFIED."
+        return group
+    help_text = (help_dir / "tool.log").read_text(encoding="utf-8")
+    if kind == "iostore" and (not re.search(r"\bIoStore(?:Utilities)?\b", help_text, re.IGNORECASE)
+                              or not _supports(help_text, "-List", value=True)
+                              or not _supports(help_text, "-Csv", value=True)):
+        group["reason"] = "IoStoreUtilities must independently advertise IoStore, -List=<container> and -Csv=<output>; Pak help cannot establish this interface."
+        return group
+    commands = ("-Test", "-List") if kind == "pak" else ("-List",)
+    for item in items:
+        path = c.local_path(build, item["path"])
+        for command in commands:
+            check = {"container": item["path"], "module": entry["module"], "command": command,
+                     "status": "NOT_VERIFIED", "tool_sha256": entry["tool_sha256"]}
+            group["checks"].append(check)
+            if (kind == "pak" and not _supports(help_text, command)) or (crypto_json and not _supports(help_text, "-CryptoKeys", value=True)):
+                check["reason"] = "Required argument is absent from this entry point's help; no container command executed."
+                continue
+            private = folder / str(len(group["checks"]))
+            private.mkdir()
+            listing = private / "contents.csv"
+            argv = ([tool, str(path), command] if kind == "pak" else
+                    [tool, *prefix, "-List=" + str(path), "-Csv=" + str(listing)])
+            if crypto_json:
+                argv.append("-CryptoKeys=" + str(safe_path(crypto_json)))
+            if c.file_digest(path) != item["sha256"]:
+                raise GuardError("Container changed before verification; evidence invalid.")
+            try:
+                execution = private_run(argv, private, secrets=secrets, operation=operation)
+                check.update(execution, status="REVIEW" if execution["exit_code"] == 0 else "FAIL")
+                if kind == "iostore" and execution["exit_code"] == 0:
+                    listing = safe_path(listing)
+                    if not listing.is_file() or not listing.stat().st_size:
+                        check.update(status="NOT_VERIFIED", reason="IoStoreUtilities returned zero without the requested listing; no artifact result established.")
+                    else:
+                        check.update(listing=str(listing), listing_sha256=c.file_digest(listing))
+            except Cancelled:
+                raise
+            except (GuardError, OSError):
+                check.update(status="FAIL", reason="Container tool failed; preserve the private log and original container.")
+            if c.file_digest(path) != item["sha256"]:
+                raise GuardError("Container changed during verification; evidence invalid.")
+    statuses = {row["status"] for row in group["checks"]}
+    group["status"] = "FAIL" if "FAIL" in statuses else "NOT_VERIFIED" if "NOT_VERIFIED" in statuses else "REVIEW"
+    group["scope"] = "This container type only. Exit zero/listing is not encryption or signature proof."
+    return group
+
+
 def verify(project, engine_root, build, evidence_dir, crypto_json=None, *, operation=None):
     with writer():
         preview = verify_preview(project, engine_root, build, evidence_dir, crypto_json)
         evidence = new_output(evidence_dir, project.root, build, engine_root, create=True)
-        tool = preview["install"]["tool"]
         secrets = []
         if crypto_json:
             def collect(value):
@@ -157,45 +258,33 @@ def verify(project, engine_root, build, evidence_dir, crypto_json=None, *, opera
                 elif isinstance(value, str) and len(value) >= 8:
                     secrets.append(value)
             collect(read_json(crypto_json))
-        findings, checks = [], []
+        findings, checks, groups = [], [], {}
         # Store initial status before invoking even the help command.
-        record = {**preview, "status": "INCOMPLETE", "checks": checks}
+        record = {**preview, "status": "INCOMPLETE", "checks": checks, "groups": groups}
         c.write_json(evidence / "verification.json", record)
-        help_dir = evidence / "help"
-        help_dir.mkdir()
-        private_run([tool, "-Help"], help_dir, secrets=secrets, operation=operation)
-        help_text = (help_dir / "tool.log").read_text(encoding="utf-8").lower()
-        for item in preview["files"]:
-            path = c.local_path(Path(preview["build"]), item["path"])
-            suffix = path.suffix.lower()
-            if suffix not in {".pak", ".utoc"}:
-                continue
-            kind = "PAK" if suffix == ".pak" else "IOSTORE"
-            commands = ["-Test", "-List"] if suffix == ".pak" else ["-Info", "-List"]
-            for command in commands:
-                if command.lower() not in help_text:
-                    findings.append(finding(kind + "_TOOL_SYNTAX", "artifact", "NOT_VERIFIED", "Matching tool help does not advertise this check; inspect this version's official documentation.", [item["path"], command]))
-                    continue
-                private = evidence / (str(len(checks)) + "-" + kind.lower())
-                private.mkdir()
-                argv = [tool, str(path), command]
-                if crypto_json:
-                    argv.append("-cryptokeys=" + str(safe_path(crypto_json)))
-                before = c.file_digest(path)
-                run = private_run(argv, private, secrets=secrets, operation=operation)
-                checks.append({"container": item["path"], "command": command, **run})
-                if before != item["sha256"] or c.file_digest(path) != before:
-                    raise GuardError("Container changed during verification; evidence invalid.")
-                findings.append(finding(kind + "_OFFICIAL_CHECK", "artifact", "REVIEW" if run["exit_code"] == 0 else "FAIL",
-                                        "Official tool completed; inspect contents/encryption/signing evidence in the private log. Exit zero alone does not prove protection."
-                                        if run["exit_code"] == 0 else "Official container check failed; wrong keys, corruption or unsupported arguments require investigation.",
-                                        [item["path"], command, {"log_sha256": run["log_sha256"]}]))
+        for kind, suffix in (("pak", ".pak"), ("iostore", ".utoc")):
+            folder = evidence / kind
+            folder.mkdir()
+            c.write_json(folder / "verification.json", {"kind": kind, "status": "INCOMPLETE"})
+            items = [x for x in preview["files"] if Path(x["path"]).suffix.lower() == suffix]
+            group = _verify_group(kind, preview["install"]["tools"][kind], items,
+                                  Path(preview["build"]), folder, crypto_json, secrets, operation)
+            groups[kind] = group
+            checks.extend(group["checks"])
+            c.write_json(folder / "verification.json", group)
+            if items:
+                findings.append(finding(kind.upper() + "_OFFICIAL_CHECK", "artifact", group["status"],
+                                        group.get("reason", group.get("scope", "Review this container type's private tool records.")),
+                                        [x["path"] for x in items]))
         for item in preview["files"]:
             if c.file_digest(c.local_path(Path(preview["build"]), item["path"])) != item["sha256"]:
                 raise GuardError("Container/partition/signature changed during verification.")
+        if UnrealAdapter().detect(project, engine_root) != preview["install"]:
+            raise GuardError("UE tool installation/version changed during verification; evidence invalid.")
         findings += [finding("PAK_ENCRYPTION_SIGNING", "artifact", "NOT_VERIFIED", "Review index/content flags and verify signing with trusted key in this UE version; a .sig file or settings alone is not proof."),
                      finding("IOSTORE_ENCRYPTION_SIGNING", "artifact", "NOT_VERIFIED", "Separate TOC/data encryption, signing and chunk integrity proof required; Pak index result is not transferable."),
                      finding("CONTAINER_RUNTIME", "runtime", "NOT_VERIFIED", "Test actual resource loads, DLC, patches, saves, offline startup and performance.")]
-        record.update(status="FAIL" if any(f["status"] == "FAIL" for f in findings) else "REVIEW", findings=findings)
+        statuses = {group["status"] for group in groups.values()}
+        record.update(status="FAIL" if "FAIL" in statuses else "NOT_VERIFIED" if "NOT_VERIFIED" in statuses else "REVIEW", findings=findings)
         c.write_json(evidence / "verification.json", record)
         return record

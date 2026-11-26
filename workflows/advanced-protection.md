@@ -37,7 +37,17 @@ python -m steam_release_guard advanced unity-inspect "D:/GameCopy" --build "D:/B
 
 ## Unreal 独立配置与容器检查
 
-编辑 [UE 策略](../examples/advanced/unreal-policy.json)，每项都是显式开关。当前审查范围 UE 5.0–5.6；未知/自编译 GUID 和更新版本需重新核查。现有 AES key 必须是有效非零 32 字节 Base64；签名字段只检查编码/非空，**不是 RSA key 对正确性验证**。生产 key 必须由你在 UE 管理；SRG 不生成/轮换，不在结果中输出其值。
+编辑 [UE 策略](../examples/advanced/unreal-policy.json)。schema 2 把容器策略和 CryptoKeys 开关分开，`container_policy` 必须明确选择；schema 1 的 `iostore` 布尔值不能表达是否允许启用 Pak，旧配置会停止并要求人工迁移，不会猜测或自动修改。
+
+| 策略 | UsePakFile / bUseIoStore | 当前处理 |
+|---|---|---|
+| `pak-only` | True / False | 按明确选择预览、备份后写入 |
+| `pak+iostore` | True / True | 按明确选择预览、备份后写入；Pak 和 IoStore 分别验收 |
+| `iostore-only` | False / True | 当前 Windows/UAT profile 没有已验证的独立组合，NOT_VERIFIED，写入前停止；不自动改成 True / True |
+
+策略允许你明确改变原容器方式，但 CryptoKeys 开关本身不会选择容器。先对照原工程 Packaging、平台覆盖与发布流程选择策略，再用 dry-run 审核；没有授权的策略变化就不执行 apply。官方 Zen Loader 流程还使用伴随 Pak 承载 loose files，并在挂载 Pak 时挂载对应容器；不能只凭两个 INI 布尔值承诺纯 IoStore 支持。
+
+配置审查范围仍是 UE 5.0–5.6；未知/自编译 GUID 和更新版本需重新核查。现有 AES key 必须是有效非零 32 字节 Base64；签名字段只检查编码/非空，**不是 RSA key 对正确性验证**。生产 key 必须由你在 UE 管理；SRG 不生成/轮换，不在结果中输出其值。
 
 ```powershell
 python -m steam_release_guard advanced unreal-plan "D:/UECopy" --config "D:/Profiles/unreal.json" --json
@@ -48,9 +58,17 @@ python -m steam_release_guard advanced unreal-verify "D:/UECopy" --engine-root "
 python -m steam_release_guard advanced unreal-verify "D:/UECopy" --engine-root "D:/UE_5.6" --build "D:/Builds/UE-001" --evidence-dir "D:/Private/UE-001" --crypto-json "D:/Private/Crypto.json" --yes --json
 ```
 
-实际构建使用原有 `build-script` 流程。`unreal-verify` 读取 Engine/Build/Build.version，匹配项目版本后检查 UnrealPak 自身帮助：Pak 调用 -Test/-List，IoStore 独立调用 -Info/-List（帮助没有对应参数则不猜测）。只保存私有日志和文件哈希，不提取资源。返回零仅记 REVIEW；必须审阅日志里的具体加密范围、签名/完整性证据，并在同版引擎启动验证。缺少官方工具不会安装第三方解包器。
+实际构建继续使用原有 `build-script` 流程。`unreal-verify` 分别建立 PakFileUtilities 和 IoStoreUtilities 检查入口，先从同一安装的 `Engine/Build/Build.version` 核对版本，再检查该入口自己的帮助；版本不符、缺工具或未知参数不会调用容器命令，记录 NOT_VERIFIED。
 
-参考 [UE5.6 Zen Loader 官方说明](https://dev.epicgames.com/documentation/en-us/unreal-engine/zen-loader-in-unreal-engine?application_version=5.6)。`.utoc` 描述容器结构，`.ucas` 承载数据；Pak index 加密不能证明 IoStore 加密。部分项目还有分区 `.ucas`、DLC 和平台配置覆盖，全部需纳入版本清单和实际加载验证。签名有效性当前保留 NOT_VERIFIED，不能依据 `.sig` 存在或退出码推断有效。
+- Pak 使用 `Engine/Binaries/Win64/UnrealPak.exe -Help`，仅对 `.pak` 调用帮助中明确支持的 `-Test` / `-List`。
+- IoStoreUtilities 是 UE Developer 模块。已查到的官方入口由 `UnrealPak.exe IoStore` 承载，不是已确认存在的独立 `IoStoreUtilities.exe`。当前只开放已核对文档的 UE 5.6 入口；独立调用 `IoStore -Help`，要求它明确给出 IoStore 身份、`-List=<container>` 和 `-Csv=<path>`，才对 `.utoc` 运行 `IoStore -List=<utoc> -Csv=<私有输出>`。不复用 Pak 帮助，不把 `.utoc` 交给普通 Pak 检查。不认识的独立 EXE/DLL 不当作可执行替代品。
+- 使用 `--crypto-json` 时，各入口还必须明确支持 `-CryptoKeys=`。缺少参数只记录未验证，不尝试其他拼法/命令。只检查与构建内现有容器类型对应的入口；另一类记录 NOT_REQUESTED。
+- 分别保存 `pak/verification.json`、`iostore/verification.json`、各自帮助/执行日志；总记录为 `verification.json`。每类记录包含模块、版本/程序哈希、单容器结果。一个入口失败不覆盖另一类记录；执行失败标 FAIL，缺参数标 NOT_VERIFIED。IoStore 返回零但没有生成非空清单仍为 NOT_VERIFIED。
+- 返回零且有检查证据最多记 REVIEW，两个容器的加密/签名和真实运行仍分别 NOT_VERIFIED。没有提取资源或自动安装工具。Build.version 绑定所选安装，程序哈希记录所用二进制；它们不能替代官方来源核验或真实引擎测试。
+
+参考 [UE5.6 Zen Loader 官方说明](https://dev.epicgames.com/documentation/en-us/unreal-engine/zen-loader-in-unreal-engine?application_version=5.6) 和 [UE5.6 命令行参数参考](https://dev.epicgames.com/documentation/en-us/unreal-engine/unreal-engine-command-line-arguments-reference?application_version=5.6)（`csv` 给出 `-list=<ContainerFile> -csv=<path>`）。Context7 仅提供未分版本索引，本次转查上述精确版本文档；本机没有 UE，帮助输出和实际执行尚未实测，能力门槛不满足就停止，不伪造兼容性。
+
+`.utoc` 描述容器结构，`.ucas` 承载数据；Pak index 加密不能证明 IoStore 加密。部分项目还有分区 `.ucas`、DLC 和平台配置覆盖，全部需纳入版本清单和实际加载验证。签名有效性当前保留 NOT_VERIFIED，不能依据 `.sig` 存在或退出码推断有效。
 
 `asset-plan` 对 Content 文件按显式路径规则分 A/B/C，缺规则和重复命中都标 REVIEW。分级不会自动创建 Chunk/PrimaryAssetLabel/AssetManager 或分配 secondary key。先在 Editor 审核依赖和加载关系后实现分块；全资源加密是全局开关，不能称为分级加密。分别评估 A 核心资源、B 普通资源、C 公开资源的收益，记录启动、加载、内存、补丁和 DLC 基线。
 

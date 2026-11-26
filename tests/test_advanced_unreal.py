@@ -1,6 +1,7 @@
 import base64
 import json
 import unittest
+from pathlib import Path
 from unittest import mock
 
 import test_guard as fixtures
@@ -16,8 +17,8 @@ class UnrealAdvancedTests(unittest.TestCase):
     cli = fixtures.GuardTests.cli
 
     def profile(self):
-        return {"schema": 1, "engine_version": "5.6", "pak": {"index": True, "ini": True,
-                "uasset": False, "all_assets": False, "signing": False}, "iostore": True,
+        return {"schema": 2, "engine_version": "5.6", "pak": {"index": True, "ini": True,
+                "uasset": False, "all_assets": False, "signing": False}, "container_policy": "pak+iostore",
                 "assets": [{"path": "Content/Core/*", "grade": "A", "loading": "streamed"}]}
 
     def test_each_crypto_switch_independent_and_key_bytes_preserved_on_rollback(self):
@@ -77,8 +78,9 @@ class UnrealAdvancedTests(unittest.TestCase):
         build = self.root / "build"
         self.put("Demo.utoc", b"fixture", build)
         engine = self.engine(5)
-        with self.assertRaises(core.GuardError):
-            unreal.verify_preview(project, engine, build, self.root / "evidence")
+        detected = unreal.UnrealAdapter().detect(project, engine)
+        self.assertEqual(detected["status"], "NOT_VERIFIED")
+        self.assertTrue(all(x["status"] == "NOT_VERIFIED" for x in detected["tools"].values()))
         self.engine()
         with self.assertRaisesRegex(core.GuardError, "ucas"):
             unreal.verify_preview(project, engine, build, self.root / "evidence")
@@ -96,14 +98,23 @@ class UnrealAdvancedTests(unittest.TestCase):
 
         def fake_run(argv, folder, **kwargs):
             calls.append(argv)
-            (folder / "tool.log").write_text("-Test -List -Info" if "-Help" in argv else "synthetic only", encoding="utf-8")
+            text = ("IoStoreUtilities -List=<container> -Csv=<path>" if "IoStore" in argv else "UnrealPak -Test -List") if "-Help" in argv else "synthetic only"
+            (folder / "tool.log").write_text(text, encoding="utf-8")
+            for arg in argv:
+                if arg.startswith("-Csv="):
+                    Path(arg[5:]).write_text("synthetic listing only", encoding="utf-8")
             return {"exit_code": 0, "log_sha256": "a" * 64}
         with mock.patch.object(unreal, "private_run", side_effect=fake_run):
             output = unreal.verify(project, self.engine(), build, self.root / "evidence")
         self.assertEqual(len(calls), 5)
-        self.assertTrue(any(call[1].endswith(".utoc") for call in calls))
+        self.assertTrue(any(call[1] == "IoStore" and any(a.startswith("-List=") and a.endswith(".utoc") for a in call) for call in calls))
+        self.assertFalse(any(len(call) > 2 and call[1].endswith(".utoc") for call in calls))
         self.assertEqual(output["status"], "REVIEW")
         self.assertFalse(any(f["status"] == "PASS" for f in output["findings"]))
+        for kind in ("pak", "iostore"):
+            saved = json.loads((self.root / "evidence" / kind / "verification.json").read_text())
+            self.assertEqual(saved, output["groups"][kind])
+            self.assertEqual(saved["protection"], "NOT_VERIFIED")
 
     def test_cli_dry_run_is_read_only_and_never_prints_crypto_material(self):
         project = self.unreal_project()

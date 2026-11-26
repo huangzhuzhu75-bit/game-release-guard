@@ -14,13 +14,15 @@
 |---|---|---|
 | Unity Obfuz 4.0.0 | 包检测、显式类型名单/排除、字段开关、Editor 构建桥接、完成事件与程序集证据、私有日志/映射 | Unity 6000.6.6f1 实际 API 编译通过；真实混淆/IL2CPP 运行未验证。字符串/控制流暂拒绝启用 |
 | IL2CPP / 原生插件 | PE/托管结构、元数据头、依赖、调试符号、敏感字面量候选 | **没有实施 metadata 加密**，不改引擎或删除 DLL |
-| UE Pak / IoStore | 独立 CryptoKeys 开关、原 key 保留、事务回滚、对应版本官方工具调用及独立容器结果 | 无本机 UE；签名/加密效果和运行未验证。退出码不当保护证明 |
+| UE Pak / IoStore | 显式容器策略、独立 CryptoKeys 开关、原 key 保留及回滚；PakFileUtilities / IoStoreUtilities 各自帮助检查与记录 | UE 5.6 IoStore 模块通过官方 `UnrealPak.exe IoStore` 入口调用；缺少版本/参数证据则 NOT_VERIFIED。签名/加密效果和运行未验证 |
 | A/B/C 资源策略 | 显式路径分级、加载与补丁成本建议 | 分类不等于已加密，不自动创建 Chunk 或修改资源加载逻辑 |
 | 完整性 / DRM 产物 | SHA256 版本清单、独立可信 pin、变更/缺失/新增检测、原 EXE 与输出 PE 检查 | 没有自动游戏内执行；客户端校验可被绕过，未调用 Steam Wrapper |
 | 多人游戏安全 | 具体文件/行号的只读风险定位、已有 authority 宏线索、服务器设计建议 | 启发式检查，不证明服务端校验缺失或安全，不改服务器 |
 | 性能 / 验收 | 基线/候选文件绑定、测量样本对比、配置/产物/运行证据分层 | 无实机数据不标 PASS，人工 PASS 声明只记 RECORDED_PASS |
 
 完整审查、授权/维护和兼容性风险见 [P3 审查](docs/P3-REVIEW.md)；实际测试范围见 [P3 验证记录](docs/P3-VALIDATION.md)。不会强制安装第三方工具、生成/轮换生产密钥或上传游戏文件。
+
+UE 高级策略现在使用 **schema 2**，必须明确选择 `container_policy`：`pak-only` 或 `pak+iostore`。`iostore-only` 在当前 Windows/UAT 适配范围内没有已验证的独立组合，因此在写入前停止并说明原因，不自动改成 Pak。旧 schema 1 不会自动迁移；先按 [示例](examples/advanced/unreal-policy.json) 选择策略，再运行 `unreal-plan` / `unreal-apply --dry-run` 核对。容器选择与加密开关分开，不再因开启加密而隐式启用 Pak。
 
 ## 独立游戏安全开发 Skill
 

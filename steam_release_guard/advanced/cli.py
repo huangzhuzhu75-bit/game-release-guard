@@ -138,7 +138,9 @@ def run_unreal(args, project, confirm, emit, operation):
     planned = unreal.UnrealAdapter().plan(project, config)
     preview = {"engine": project.engine, "engine_version": project.version,
                "changes": [{"path": x.path, "purpose": x.purpose, "before_sha256": x.before_sha256} for x in planned],
-               "requested_switches": config["pak"], "iostore_requested": config["iostore"],
+               "requested_switches": config["pak"], "container_policy": config["container_policy"],
+               "pak_requested": unreal.CONTAINERS[config["container_policy"]][0],
+               "iostore_requested": unreal.CONTAINERS[config["container_policy"]][1],
                "signing_key_validity": "NOT_VERIFIED" if config["pak"]["signing"] else "NOT_REQUESTED",
                "artifact": "NOT_VERIFIED", "runtime": "NOT_VERIFIED",
                "tradeoff": "Disabling a switch reduces its corresponding protection. All-asset encryption increases IO/patch cost; grade rules do not automatically create chunks."}
