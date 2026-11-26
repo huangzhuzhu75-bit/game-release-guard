@@ -1,6 +1,6 @@
 # Security and privacy boundaries
 
-Steam Release Guard is a local release review aid. It does not claim to prevent copying, reverse engineering, resource extraction or piracy, and it is not anti-cheat software.
+Game Release Guard is a local release review aid. It does not claim to prevent copying, reverse engineering, resource extraction or piracy, and it is not anti-cheat software.
 
 - `plan`, `apply`, `audit`, `stage` and `rollback` make no network calls. Opening an HTML report uses the local browser and a self-contained page without scripts or remote assets.
 - `Invoke-SteamDrm.ps1` is the explicit exception: it invokes the user's SteamCMD and uploads the input EXE to Valve after `-AcknowledgeExecutableUpload` is supplied. It does not include credentials or upload a depot.

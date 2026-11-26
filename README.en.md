@@ -1,43 +1,49 @@
 <p align="center"><a href="README.md">简体中文</a> | <a href="README.en.md">English</a></p>
 
-![Steam Release Guard — Protect your game. From day one.](docs/assets/hero.svg)
+![Game Release Guard — Protect your game. From day one.](docs/assets/hero.svg)
 
-<h1 align="center">Steam Release Guard</h1>
+<h1 align="center">Game Release Guard</h1>
 <p align="center"><strong>Protect your game. From day one.</strong><br/>从开发第一天开始，保护你的游戏。</p>
-<p align="center">A reusable game security toolkit for Unity and Unreal developers, combining AI-assisted secure development with practical release protection.</p>
+<p align="center">One security development and hardening Skill for Unity, Unreal, Godot, Cocos Creator and GameMaker, with local release tools for Unity and Unreal.</p>
 
 <p align="center"><a href="README.md">简体中文</a> | <a href="README.en.md">English</a></p>
 
-[![CI](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions/workflows/test.yml)
+[![CI](https://github.com/huangzhuzhu75-bit/game-release-guard/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/huangzhuzhu75-bit/game-release-guard/actions/workflows/test.yml)
 [![Early Development](https://img.shields.io/badge/status-Early%20Development-466985)](#status)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3675a8)](#quick-start)
 [![MIT](https://img.shields.io/badge/license-MIT-71869b)](LICENSE)
 
-**Early Development / Advanced Protection Candidate.** P0, P3 and the standalone Skill are integrated into `main`. The program version remains `0.2.0.dev0`; this is not a Stable or Production Ready release. Get the source from [main ZIP](https://github.com/huangzhuzhu75-bit/steam-release-guard/archive/refs/heads/main.zip) or Git. [Releases](https://github.com/huangzhuzhu75-bit/steam-release-guard/releases) lists actual publications only; no stable distribution is available.
+**Multi-Engine AI Skills V1.0 · Local toolkit: Early Development / Advanced Protection Candidate.** P0, P3 and the standalone Skill are integrated into `main`. The program version remains `0.2.0.dev0`; this is not a Stable or Production Ready release. Get the source from [main ZIP](https://github.com/huangzhuzhu75-bit/game-release-guard/archive/refs/heads/main.zip) or Git. [Releases](https://github.com/huangzhuzhu75-bit/game-release-guard/releases) lists actual publications only; no stable distribution is available.
 
 [Quick start](#quick-start) · [Install the Skill](#ai-skill) · [Capabilities](#advanced) · [Security boundaries](#boundaries) · [Evidence](#validation)
 
 ## Core capabilities
 
-| Workflow | What it provides |
+| Feature | What it provides |
 |---|---|
-| **Secure Development** | One Skill guides code organization, sensitive data handling, debug isolation and server authority from the start of a game project. |
-| **Security Audit** | Your AI assistant identifies files, risks and suggested fixes in the conversation. Inspection is read-only by default, with no unsolicited edits or report files. |
-| **Release Guard** | A local CLI and Tkinter GUI for full backups, restore-to-copy, release configuration, package inspection, symbol staging and rollback. |
-| **Advanced Protection** | Explicitly enabled Obfuz integration, native/metadata inspection, Pak/IoStore checks, file integrity and build evidence workflows. |
+| **AI Secure Development** | Engine-aware secure development from project initialization, without extra security reports. |
+| **Existing Project Protection** | Review requests stay read-only; explicit hardening requests lead to backed-up, scoped edits and compatibility checks. |
+| **Unity & Unreal Release Toolkit** | Existing local CLI / Tkinter GUI for backups, restore, configuration, release checks, opt-in advanced flows and rollback. |
+| **Godot Security Skill** | GDScript export, PCK AES-256, custom templates, key handling and patch/mod provenance guidance. |
+| **Cocos Creator Security Skill** | Version-aware Native / Web boundaries, Encrypt JS, JSC, script backups and resource/hot-update checks. |
+| **GameMaker Security Skill** | Runtime and VM / YYC distinctions, development features, Included Files, client data and release checks. |
+
+**One Skill covers five engines.** Unity and Unreal have local CLI / GUI support. Godot, Cocos Creator and GameMaker currently use AI-guided project edits only, with no local automated encryption tool.
 
 <a id="quick-start"></a>
 ## 30-second quick start
 
-**Just want the AI guidance? Read [SKILL.md](skills/steam-release-guard/SKILL.md) directly. No Python required.**
+**Just want the AI guidance? Download the [complete Skill ZIP](downloads/game-release-guard-skill.zip) and give your assistant the [universal prompt](#use-with-ai) below. No Python required.**
 
 The local toolkit requires an existing **Python 3.10+** installation, with `tkinter` for the GUI. It uses the standard library: no `pip install`, automatic Python download, engine installation or protector installation. Adapters target Windows / Steam; Linux CI tests toolkit logic, not Linux game builds.
 
 ```shell
-git clone https://github.com/huangzhuzhu75-bit/steam-release-guard.git
-cd steam-release-guard
+git clone https://github.com/huangzhuzhu75-bit/game-release-guard.git
+cd game-release-guard
 python -m steam_release_guard --help
 ```
+
+Formerly Steam Release Guard. The Python package and CLI remain `steam_release_guard`; existing Unity menu and private backup directory names are also preserved for compatibility.
 
 On Windows, double-click `Launch.cmd` for the GUI. If Python is not found, put your existing interpreter path in `.local/python-path.txt` or set the process variable `SRG_PYTHON`. Replace the example path with your own **test copy**, then preview:
 
@@ -104,16 +110,17 @@ Replace `BACKUP_ID` with the directory name returned by the backup operation. Re
 ### Copy this to your AI
 
 ```text
-Read README.en.md and skills/steam-release-guard/SKILL.md at https://github.com/huangzhuzhu75-bit/steam-release-guard. Set up and use this Skill for my current game project.
-If you support native Skills, use your current client's project-level installation method; otherwise read and follow the Markdown directly. Keep LICENSE and existing instructions. Do not overwrite same-named files, change global configuration or install extra software.
-Briefly state the source you read or the path you saved, then wait for my development or review task. Installing the Skill does not authorize game edits, builds, reports or project uploads.
+Read README.en.md and skills/game-release-guard/SKILL.md at https://github.com/huangzhuzhu75-bit/game-release-guard.
+Set up the entire game-release-guard Skill folder, including engines/ and LICENSE, for this project. Use project-level native Skill support if available; otherwise read it as Markdown.
+Identify the engine and version, then read only its engine guide. Preserve existing instructions. Do not overwrite files, change global configuration or install extra software.
+State the actual path and wait for my task: review means read-only; an explicit hardening request means back up, implement scoped changes and verify. Do not upload the project or create a separate report.
 ```
 
-**Or download it directly:** [Standalone Skill ZIP](https://github.com/huangzhuzhu75-bit/steam-release-guard/raw/refs/heads/main/downloads/steam-release-guard-skill.zip) · [SKILL.md](skills/steam-release-guard/SKILL.md) · [LICENSE](skills/steam-release-guard/LICENSE)
+**Or download it directly:** [Standalone Skill ZIP](https://github.com/huangzhuzhu75-bit/game-release-guard/raw/refs/heads/main/downloads/game-release-guard-skill.zip) · [SKILL.md](skills/game-release-guard/SKILL.md) · [LICENSE](skills/game-release-guard/LICENSE)
 
-The ZIP contains only the same Skill, its license and bilingual guides. No Python required. If your assistant cannot open the link, extract the ZIP and give it `SKILL.md` to read. The core text is currently Chinese; ask the assistant to respond in your preferred language.
+The ZIP contains one core Skill, five engine guides, the MIT license and bilingual instructions: 11 files, with no Python required. Keep the whole folder. The AI identifies the project and reads only its engine guide. Without internet access, use the local folder. The core text is Chinese; request replies in your preferred language.
 
-[中文使用说明](skills/steam-release-guard/INSTALL.md) · [English guide](skills/steam-release-guard/INSTALL.en.md) · [Example prompts](skills/steam-release-guard/EXAMPLES.en.md)
+[中文使用说明](skills/game-release-guard/INSTALL.md) · [English guide](skills/game-release-guard/INSTALL.en.md) · [Example prompts](skills/game-release-guard/EXAMPLES.en.md)
 
 ## Unity capabilities
 
@@ -130,6 +137,16 @@ The ZIP contains only the same Skill, its license and bilingual guides. No Pytho
 - Pak and IoStore have independent version, help-argument and evidence checks. UE 5.6 IoStoreUtilities uses the official `UnrealPak.exe IoStore` module entry point. Missing tools, incompatible versions or unsupported arguments produce NOT_VERIFIED.
 - The legacy basic option `--encrypt-pak-index` sets `UsePakFile=True` while preserving `bUseIoStore`; review that container change before using it. Index encryption does not establish asset-content or IoStore encryption.
 - AES validation checks existing nonzero 32-byte material only. Signing-field encoding checks do not prove a valid RSA key pair or signature. Production keys are not generated/rotated, and all-asset encryption is not enabled automatically.
+
+## Godot, Cocos Creator and GameMaker
+
+[Godot 4.x](skills/game-release-guard/engines/godot.md): PCK AES-256 requires custom templates compiled with the matching key. GDScript tokens/compression are not encryption.
+
+[Cocos Creator 3.x / 4.x](skills/game-release-guard/engines/cocos-creator.md): Native Encrypt JS requires JSC and script-backup exclusion checks; do not apply it to Web builds.
+
+[GameMaker](skills/game-release-guard/engines/gamemaker.md): evaluate YYC against the actual Runtime and target. Native compilation is not resource encryption.
+
+An explicit hardening request lets the AI back up and implement applicable code/configuration changes. Protection still needs build/runtime evidence in the user's environment. This update validates Skill behavior on synthetic projects; it adds no engine adapters or real-engine builds.
 
 <a id="advanced"></a>
 ## Advanced protection: capabilities and status
@@ -175,9 +192,9 @@ python -m compileall -q steam_release_guard
 
 CI covers **Windows / Linux × Python 3.10 / 3.12**: behavior, backup recovery, transactions, documented commands and module compilation. Windows also parses PowerShell scripts. Headless Linux skips GUI and Windows file-sharing tests; Windows CI runs them. The local Windows 10 environment skips the existing symlink test when permissions are unavailable.
 
-PR #2 and the updated PR #1 passed their matrices. See the live badge and [Actions](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions) for the current commit. Synthetic fixtures are not real games; API compilation is not an engine build or game runtime test. No Stable release is published.
+PR #2 and the updated PR #1 passed their matrices. See the live badge and [Actions](https://github.com/huangzhuzhu75-bit/game-release-guard/actions) for the current commit. Synthetic fixtures are not real games; API compilation is not an engine build or game runtime test. No Stable release is published.
 
-[P0 evidence](docs/P0-ACCEPTANCE-20261125.md) · [Backup evidence](docs/FULL-BACKUP-VALIDATION-20261125.md) · [P3 evidence](docs/P3-VALIDATION.md) · [Skill evidence](docs/SKILL-VALIDATION-20261125.md)
+[Five-engine Skill validation](docs/MULTI-ENGINE-SKILL-VALIDATION.md) · [P0 evidence](docs/P0-ACCEPTANCE-20261125.md) · [Backup evidence](docs/FULL-BACKUP-VALIDATION-20261125.md) · [P3 evidence](docs/P3-VALIDATION.md) · [Skill evidence](docs/SKILL-VALIDATION-20261125.md)
 
 ## Repository layout
 
@@ -185,7 +202,7 @@ PR #2 and the updated PR #1 passed their matrices. See the live badge and [Actio
 steam_release_guard/        CLI, GUI, backup, transactions
   advanced/                 Opt-in adapters and evidence checks
 adapters/                   Unity / Obfuz Editor bridges
-skills/steam-release-guard/  One Skill, installation, examples, license
+skills/game-release-guard/   Core Skill + engines/, installation, examples, license
 workflows/                  Backup, engines, inspection, rollback
 docs/                       Sources, validation, detailed usage
 downloads/                  Standalone Skill ZIP (no toolkit required)
@@ -201,7 +218,7 @@ Unity, Unreal and Steam are trademarks of their respective owners. This project 
 
 ## Contributing and feedback
 
-Minimal synthetic reproductions, documentation improvements and versioned compatibility evidence are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md); preserve existing tests, backup/rollback and evidence boundaries. Remove source code, assets, secrets and personal data before [opening an Issue](https://github.com/huangzhuzhu75-bit/steam-release-guard/issues). Follow [SECURITY.md](SECURITY.md) for security concerns. Discussions is not enabled and is not advertised.
+Minimal synthetic reproductions, documentation improvements and versioned compatibility evidence are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md); preserve existing tests, backup/rollback and evidence boundaries. Remove source code, assets, secrets and personal data before [opening an Issue](https://github.com/huangzhuzhu75-bit/game-release-guard/issues). Follow [SECURITY.md](SECURITY.md) for security concerns. Discussions is not enabled and is not advertised.
 
 ---
 

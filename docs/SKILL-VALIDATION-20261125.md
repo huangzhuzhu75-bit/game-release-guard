@@ -1,5 +1,7 @@
 # 独立 Skill 验收记录（2026-11-25）
 
+> 历史记录：此页保留当时的 steam-release-guard 名称、安装路径和测试结果。当前多引擎目录为 [game-release-guard](../skills/game-release-guard/SKILL.md)，新版本行为见 [本轮验证](MULTI-ENGINE-SKILL-VALIDATION.md)。
+
 ## 范围与环境
 
 本次只扩展一个核心 `skills/steam-release-guard/SKILL.md`，增加安装/示例/许可文档，更新已有项目入口和工作流路由，扩展现有文档校验范围。不修改 Release Guard 核心、引擎适配器、GUI、备份或回滚实现。P0 仍是待人工验收候选，不合并，不实施 Unity 深度保护。

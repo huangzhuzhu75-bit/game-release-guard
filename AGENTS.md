@@ -1,6 +1,6 @@
-# Steam Release Guard 项目指令
+# Game Release Guard 项目指令
 
-开始任务时先完整读取 [统一 Skill / Markdown 操作说明](skills/steam-release-guard/SKILL.md)，按其中的新项目开发、已有项目只读检查、已授权工具操作三种场景处理。这是明确的读取指令，普通 Markdown 链接不代表原生 Skill 已自动加载。只有实际需要调用工具时，再读对应的 [Unity](workflows/unity-release.md)、[Unreal](workflows/unreal-release.md)、[安全检查](workflows/security-audit.md) 或 [回滚](workflows/rollback.md) 工作流及真实代码。
+开始任务时先完整读取 [统一 Skill / Markdown 操作说明](skills/game-release-guard/SKILL.md)，按新项目开发、已有项目只读检查、明确授权加固三种场景处理。识别引擎和版本后，只读取对应的 engines/ 知识文件；授权加固时备份后实际修改并验证。这是明确的读取指令，普通 Markdown 链接不代表原生 Skill 已自动加载。只有实际需要调用 Unity / Unreal 本地工具时，再读对应的 [Unity](workflows/unity-release.md)、[Unreal](workflows/unreal-release.md)、[安全检查](workflows/security-audit.md) 或 [回滚](workflows/rollback.md) 工作流及真实代码。Godot、Cocos Creator、GameMaker 只有 Skill 指引，没有本地适配器。
 
 先核实项目目录、引擎精确版本。已有工程检查默认只读、仅在对话中给出位置/风险/建议，不改代码、不生成报告；audit 即使带 --json 也会写报告，不能默认调用。执行已授权的工具操作前先 plan/预览，或在用户要求报告后 audit。其余操作边界以统一 Skill 为准。
 

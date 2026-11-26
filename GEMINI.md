@@ -1,7 +1,7 @@
-# Steam Release Guard 项目上下文
+# Game Release Guard 项目上下文
 
-本文件仅提供项目级说明。开始工作前读取统一 Skill，根据其中的场景选择开发、只读检查或已授权的工具操作。
+仅作用于本仓库。先读取统一 Skill，按新项目开发、只读检查或明确授权加固选择场景；识别引擎和版本后，只读对应 engines/ 文档。
 
-@./skills/steam-release-guard/SKILL.md
+@./skills/game-release-guard/SKILL.md
 
-若当前版本未展开导入，手动完整读取 [统一 Markdown](skills/steam-release-guard/SKILL.md)。安全规则只维护在该文件。已有项目检查默认仅在对话中给出发现，不修改、不生成报告。独立安装与实际读取验证见 [AI-START.md](AI-START.md)。
+若当前客户端没有展开导入，手动读取 [核心 Markdown](skills/game-release-guard/SKILL.md)。检查默认只读，不写报告；明确要求加固时，在范围内核验备份、实际修改并验证，结果在对话说明。安装和通用使用方式见 [AI-START.md](AI-START.md)。

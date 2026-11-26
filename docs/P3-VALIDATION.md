@@ -49,7 +49,7 @@
 - UE 策略升级 schema 2，容器选择明确写为 `pak-only` 或 `pak+iostore`；旧 schema 1 不自动迁移。`iostore-only` 在当前 Windows/UAT profile 没有验证过的独立组合，写入和备份前停止，不擅自开启 Pak。两个支持的策略均验证完整备份、密钥保留和逐字节回滚。
 - 新增 14 项回归测试；原 111 项全部保留。原 UE 测试仅更新显式策略夹具、版本错误的 NOT_VERIFIED 预期和正确的模块调用断言，没有删除或降低覆盖。覆盖仅一种入口、两种入口、缺宿主/未确认的独立 EXE、版本不匹配/未知版本、参数缺失、帮助/执行失败、退出零无清单、两类结果隔离、单类容器不调用另一类和只读 CLI 预览。
 - 本机 Windows 10 / Python 3.12.14 全量 **125 项：124 通过，1 个旧 Windows 符号链接权限测试跳过**。合成工具和容器只验证调用/安全边界，不证明 UE 实际兼容或保护效果。README/P3 工作流示例由实际 CLI parser 检查，未新增 CLI 命令。
-- 保留 `.github/workflows/test.yml` 的 Windows/Linux × Python 3.10/3.12 四组合，以及模块编译、Windows PowerShell 语法检查。最终提交的矩阵结果以 [PR #2 Checks](https://github.com/huangzhuzhu75-bit/steam-release-guard/pull/2/checks) 绑定的 HEAD 与日志为准；不能用本机结果代替其余环境。
+- 保留 `.github/workflows/test.yml` 的 Windows/Linux × Python 3.10/3.12 四组合，以及模块编译、Windows PowerShell 语法检查。最终提交的矩阵结果以 [PR #2 Checks](https://github.com/huangzhuzhu75-bit/game-release-guard/pull/2/checks) 绑定的 HEAD 与日志为准；不能用本机结果代替其余环境。
 - 对固定 Obfuz 源码的事件、配置类型、生成路径和程序集引用做定向复查，未发现新的确定 API/配置错误；没有扩展字符串/控制流保护或 metadata 加密。真实游戏构建与运行仍 **NOT_VERIFIED**。
 
 ## 未完成的真实验收

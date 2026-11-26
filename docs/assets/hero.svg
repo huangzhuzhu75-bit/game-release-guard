@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="340" viewBox="0 0 1280 340" role="img" aria-labelledby="title desc">
-  <title id="title">Steam Release Guard</title>
+  <title id="title">Game Release Guard</title>
   <desc id="desc">Protect your game. From day one. Navy and blue developer toolkit banner.</desc>
   <defs>
     <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#071323"/><stop offset="1" stop-color="#12283e"/></linearGradient>
@@ -9,10 +9,10 @@
   <rect width="1280" height="340" rx="18" fill="url(#bg)"/>
   <rect width="1280" height="340" rx="18" fill="url(#grid)"/>
   <path d="M56 58h48" stroke="url(#line)" stroke-width="5" stroke-linecap="round"/>
-  <text x="56" y="101" fill="#8faec7" font-family="Segoe UI,Arial,sans-serif" font-size="17" letter-spacing="4">UNITY · UNREAL · AI SKILLS</text>
-  <text x="52" y="180" fill="#f0f6fc" font-family="Segoe UI,Arial,sans-serif" font-size="65" font-weight="650" letter-spacing="-2">Steam Release Guard</text>
+  <text x="56" y="101" fill="#8faec7" font-family="Segoe UI,Arial,sans-serif" font-size="17" letter-spacing="4">MULTI-ENGINE AI SKILLS</text>
+  <text x="52" y="180" fill="#f0f6fc" font-family="Segoe UI,Arial,sans-serif" font-size="65" font-weight="650" letter-spacing="-2">Game Release Guard</text>
   <text x="56" y="229" fill="#bdcede" font-family="Segoe UI,Arial,sans-serif" font-size="27">Protect your game. From day one.</text>
-  <text x="56" y="287" fill="#7796b0" font-family="Segoe UI,Arial,sans-serif" font-size="16" letter-spacing="2">DEVELOP   /   INSPECT   /   RELEASE</text>
+  <text x="56" y="287" fill="#7796b0" font-family="Segoe UI,Arial,sans-serif" font-size="16" letter-spacing="2">DEVELOP   /   REVIEW   /   HARDEN</text>
   <g fill="#102235" stroke="#355775" stroke-width="1.5"><rect x="1017" y="53" width="177" height="173" rx="14"/><rect x="985" y="85" width="177" height="173" rx="14"/><rect x="953" y="117" width="177" height="173" rx="14"/></g>
   <g fill="none" stroke="url(#line)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M993 158l-13 13 13 13m54-26 13 13-13 13m-25-35-12 42"/><path d="M979 220h103m-103 17h70m-70 17h87" stroke-opacity=".55"/></g>
   <circle cx="1103" cy="145" r="5" fill="#54b5ff"/>

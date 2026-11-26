@@ -1,43 +1,49 @@
 <p align="center"><a href="README.md">简体中文</a> | <a href="README.en.md">English</a></p>
 
-![Steam Release Guard — Protect your game. From day one.](docs/assets/hero.svg)
+![Game Release Guard — Protect your game. From day one.](docs/assets/hero.svg)
 
-<h1 align="center">Steam Release Guard</h1>
+<h1 align="center">Game Release Guard</h1>
 <p align="center"><strong>Protect your game. From day one.</strong><br/>从开发第一天开始，保护你的游戏。</p>
-<p align="center">为 Unity 和 Unreal 独立游戏开发者提供可复用的安全开发与发行保护工具，结合 AI 安全编程 Skill 和本地化发行加固工具。</p>
+<p align="center">面向 Unity、Unreal、Godot、Cocos Creator 和 GameMaker 的统一安全开发与加固 Skill，附 Unity / Unreal 本地发行工具。</p>
 
 <p align="center"><a href="README.md">简体中文</a> | <a href="README.en.md">English</a></p>
 
-[![CI](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions/workflows/test.yml)
+[![CI](https://github.com/huangzhuzhu75-bit/game-release-guard/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/huangzhuzhu75-bit/game-release-guard/actions/workflows/test.yml)
 [![Early Development](https://img.shields.io/badge/status-Early%20Development-466985)](#status)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3675a8)](#quick-start)
 [![MIT](https://img.shields.io/badge/license-MIT-71869b)](LICENSE)
 
-**Early Development / Advanced Protection Candidate。** P0、P3 和独立 Skill 已整合到 `main`，程序版本仍为 `0.2.0.dev0`；不宣称 Stable / Production Ready。通过 [main ZIP](https://github.com/huangzhuzhu75-bit/steam-release-guard/archive/refs/heads/main.zip) 或 Git 获取源码。[Releases](https://github.com/huangzhuzhu75-bit/steam-release-guard/releases) 只展示实际发布内容，当前没有稳定发行包。
+**Multi-Engine AI Skills V1.0 · 本地工具仍为 Early Development / Advanced Protection Candidate。** P0、P3 和独立 Skill 已整合到 `main`，程序版本仍为 `0.2.0.dev0`；不宣称 Stable / Production Ready。通过 [main ZIP](https://github.com/huangzhuzhu75-bit/game-release-guard/archive/refs/heads/main.zip) 或 Git 获取源码。[Releases](https://github.com/huangzhuzhu75-bit/game-release-guard/releases) 只展示实际发布内容，当前没有稳定发行包。
 
 [快速开始](#quick-start) · [安装 Skill](#ai-skill) · [能力与状态](#advanced) · [安全边界](#boundaries) · [验证证据](#validation)
 
 ## 核心功能
 
-| 工作方式 | 你可以得到什么 |
+| 功能 | 能做什么 |
 |---|---|
-| **Secure Development** | 一个统一 Skill，从新游戏项目的第一天考虑代码组织、敏感数据、调试隔离和服务端权威性。 |
-| **Security Audit** | AI 在对话中指出已有工程的具体文件、风险原因和建议；默认只读，不擅自改代码或生成报告。 |
-| **Release Guard** | 本地 CLI + Tkinter GUI：完整备份、恢复新副本、配置适配、发布包检查、符号分离和回滚。 |
-| **Advanced Protection** | 显式启用 Obfuz 适配、原生/元数据检查、Pak/IoStore 检查、文件完整性及构建证据流程。 |
+| **AI Secure Development** | 从项目初始化开始，按当前引擎遵守安全开发规范，不额外生成报告。 |
+| **Existing Project Protection** | “检查”只读并指出具体问题；明确要求“加固”后，AI 备份并实施适用修改、验证兼容性。 |
+| **Unity & Unreal Release Toolkit** | 已有本地 CLI / Tkinter GUI：备份恢复、配置适配、发布检查、显式高级流程与回滚。 |
+| **Godot Security Skill** | GDScript 导出、PCK AES-256、自定义模板、密钥管理及补丁/模组来源验证指引。 |
+| **Cocos Creator Security Skill** | 按版本区分 Native / Web，处理 Encrypt JS、JSC、脚本备份及资源/热更新检查。 |
+| **GameMaker Security Skill** | 区分 Runtime、VM / YYC，检查开发入口、Included Files、客户端数据及发行验证。 |
+
+**一个 Skill 覆盖五种引擎。** Unity / Unreal 有本地 CLI / GUI；Godot、Cocos Creator、GameMaker 本阶段仅由用户的 AI 按 Skill 操作工程，不提供本地自动化加密工具。
 
 <a id="quick-start"></a>
 ## 30 秒快速开始
 
-**只想让 AI 遵守规范？直接读 [SKILL.md](skills/steam-release-guard/SKILL.md)，不需要 Python。**
+**只用 AI？下载 [完整 Skill ZIP](downloads/game-release-guard-skill.zip)，把下方 [通用提示词](#use-with-ai) 交给助手，无需 Python。**
 
 本地工具需要已有 **Python 3.10+**；GUI 另需 `tkinter`。标准库实现，无需 `pip install`，不会自动安装 Python、引擎或保护器。适配面向 Windows / Steam；Linux CI 验证工具逻辑，不代表支持 Linux 游戏构建。
 
 ```shell
-git clone https://github.com/huangzhuzhu75-bit/steam-release-guard.git
-cd steam-release-guard
+git clone https://github.com/huangzhuzhu75-bit/game-release-guard.git
+cd game-release-guard
 python -m steam_release_guard --help
 ```
+
+项目原名 Steam Release Guard。更名后 Python 包和 CLI 仍使用 `steam_release_guard`，已有 Unity 菜单与私有备份目录名也保留，兼容旧工程。
 
 Windows 可双击 `Launch.cmd` 打开 GUI。找不到 Python 时，将已有解释器路径写入 `.local/python-path.txt` 或设置进程变量 `SRG_PYTHON`。把下面路径换成自己的**测试副本**，先预览：
 
@@ -104,16 +110,17 @@ python -m steam_release_guard advanced --help
 ### 复制给 AI
 
 ```text
-请读取 https://github.com/huangzhuzhu75-bit/steam-release-guard 的 README.md 和 skills/steam-release-guard/SKILL.md，为当前游戏项目安装并使用这份 Skill。
-如果你支持原生 Skill，按当前客户端的项目级方式安装；否则直接读取 Markdown 并遵循。保留 LICENSE 和已有指令，不覆盖同名文件，不修改全局配置，不安装额外软件。
-完成后简短说明实际读取或保存的位置，等待我的开发或检查任务。不要因为安装 Skill 就修改游戏、运行构建、生成报告或上传工程。
+请读取 https://github.com/huangzhuzhu75-bit/game-release-guard 的 README.md 和 skills/game-release-guard/SKILL.md。
+为当前游戏项目安装并使用整个 game-release-guard Skill 目录，包括 engines/ 和 LICENSE；支持原生 Skill 时使用项目级安装，否则按 Markdown 阅读。
+先识别引擎和版本，只加载对应引擎文档。保留已有指令，不覆盖同名文件，不改全局配置、不安装额外软件。
+安装后说明实际路径，等待任务：我说“检查”就只读；明确要求“加固”时，在范围内备份后实际修改和验证。不擅自上传工程或生成独立报告。
 ```
 
-**也可以直接下载：** [独立 Skill ZIP](https://github.com/huangzhuzhu75-bit/steam-release-guard/raw/refs/heads/main/downloads/steam-release-guard-skill.zip) · [SKILL.md](skills/steam-release-guard/SKILL.md) · [LICENSE](skills/steam-release-guard/LICENSE)
+**也可以直接下载：** [独立 Skill ZIP](https://github.com/huangzhuzhu75-bit/game-release-guard/raw/refs/heads/main/downloads/game-release-guard-skill.zip) · [SKILL.md](skills/game-release-guard/SKILL.md) · [LICENSE](skills/game-release-guard/LICENSE)
 
-ZIP 只含同一份 Skill、许可和中英文使用说明，无需 Python。AI 无法打开链接时，解压后把 `SKILL.md` 交给它阅读即可。核心正文目前为中文，可要求 AI 用你的语言回复。
+ZIP 包含一个核心 Skill、五份引擎知识、MIT 许可及中英文说明，共 11 个文件，无需 Python。保留整个目录；AI 识别项目后只读对应引擎文档。无法联网时提供本地目录，核心正文为中文，可要求用你的语言回复。
 
-[中文使用说明](skills/steam-release-guard/INSTALL.md) · [English guide](skills/steam-release-guard/INSTALL.en.md) · [提示词示例](skills/steam-release-guard/EXAMPLES.md)
+[中文使用说明](skills/game-release-guard/INSTALL.md) · [English guide](skills/game-release-guard/INSTALL.en.md) · [提示词示例](skills/game-release-guard/EXAMPLES.md)
 
 ## Unity 功能
 
@@ -130,6 +137,16 @@ ZIP 只含同一份 Skill、许可和中英文使用说明，无需 Python。AI 
 - Pak / IoStore 独立检查版本、帮助参数和记录。UE 5.6 IoStoreUtilities 使用官方 `UnrealPak.exe IoStore` 模块入口；缺工具、版本或参数不符记 NOT_VERIFIED。
 - 基础兼容参数 `--encrypt-pak-index` 会设置 `UsePakFile=True` 并保留 `bUseIoStore`，使用前必须审核这一容器变化；索引加密不等于资源主体或 IoStore 加密。
 - AES 只检查已有非零 32 字节密钥；签名字段编码检查不是 RSA key 对/签名有效性证明。不生成或轮换生产密钥，不自动开启全资源加密。
+
+## Godot、Cocos Creator 与 GameMaker
+
+[Godot 4.x](skills/game-release-guard/engines/godot.md)：PCK AES-256 需要同密钥自编译模板，GDScript token/压缩不是加密。
+
+[Cocos Creator 3.x / 4.x](skills/game-release-guard/engines/cocos-creator.md)：Native Encrypt JS 要核验 JSC 与 script-backup 排除，不能套用 Web。
+
+[GameMaker](skills/game-release-guard/engines/gamemaker.md)：按 Runtime 和目标评估 YYC，原生编译不等于资源加密。
+
+明确要求加固后，AI 可在备份后实施适用的代码/配置修改；实际效果仍需用户环境的构建和运行证据。本次只做合成项目的 Skill 行为验证，没有新增引擎适配器或真实构建。
 
 <a id="advanced"></a>
 ## 高级保护：能力与状态
@@ -175,9 +192,9 @@ python -m compileall -q steam_release_guard
 
 CI 覆盖 **Windows / Linux × Python 3.10 / 3.12**：行为、备份恢复、事务、文档命令、模块编译；Windows 另检查 PowerShell 语法。Linux 无桌面显示时跳过 GUI 和 Windows 文件占用测试；Windows CI 执行这些项目。本机 Windows 10 的旧 symlink 测试受权限限制跳过。
 
-PR #2 和更新后的 PR #1 矩阵均通过；当前提交看顶部实时 CI 徽章与 [Actions](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions)。合成夹具不是实际游戏，API 编译不是引擎构建或游戏运行。当前未发布 Stable 版本。
+PR #2 和更新后的 PR #1 矩阵均通过；当前提交看顶部实时 CI 徽章与 [Actions](https://github.com/huangzhuzhu75-bit/game-release-guard/actions)。合成夹具不是实际游戏，API 编译不是引擎构建或游戏运行。当前未发布 Stable 版本。
 
-[P0 验证](docs/P0-ACCEPTANCE-20261125.md) · [备份验证](docs/FULL-BACKUP-VALIDATION-20261125.md) · [P3 验证](docs/P3-VALIDATION.md) · [Skill 验证](docs/SKILL-VALIDATION-20261125.md)
+[五引擎 Skill 验证](docs/MULTI-ENGINE-SKILL-VALIDATION.md) · [P0 验证](docs/P0-ACCEPTANCE-20261125.md) · [备份验证](docs/FULL-BACKUP-VALIDATION-20261125.md) · [P3 验证](docs/P3-VALIDATION.md) · [Skill 验证](docs/SKILL-VALIDATION-20261125.md)
 
 ## 目录结构
 
@@ -185,7 +202,7 @@ PR #2 和更新后的 PR #1 矩阵均通过；当前提交看顶部实时 CI 徽
 steam_release_guard/        CLI, GUI, backup, transactions
   advanced/                 Opt-in adapters and evidence checks
 adapters/                   Unity / Obfuz Editor bridges
-skills/steam-release-guard/  One Skill, installation, examples, license
+skills/game-release-guard/   Core Skill + engines/, installation, examples, license
 workflows/                  Backup, engines, inspection, rollback
 docs/                       Sources, validation, detailed usage
 downloads/                  Standalone Skill ZIP (no toolkit required)
@@ -201,7 +218,7 @@ Unity、Unreal、Steam 是各自权利人的商标，本项目与其无隶属或
 
 ## 贡献与反馈
 
-欢迎最小合成复现、文档改进和带版本/证据的兼容性结果。先读 [CONTRIBUTING.md](CONTRIBUTING.md)，保留旧测试、备份/回滚与证据边界。[提交 Issue](https://github.com/huangzhuzhu75-bit/steam-release-guard/issues) 前移除源码、资源、密钥及个人信息；安全问题按 [SECURITY.md](SECURITY.md) 处理。未启用 Discussions，不展示其入口。
+欢迎最小合成复现、文档改进和带版本/证据的兼容性结果。先读 [CONTRIBUTING.md](CONTRIBUTING.md)，保留旧测试、备份/回滚与证据边界。[提交 Issue](https://github.com/huangzhuzhu75-bit/game-release-guard/issues) 前移除源码、资源、密钥及个人信息；安全问题按 [SECURITY.md](SECURITY.md) 处理。未启用 Discussions，不展示其入口。
 
 ---
 

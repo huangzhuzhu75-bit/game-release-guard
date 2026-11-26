@@ -1,5 +1,13 @@
 # Sources and reuse review
 
+## Multi-engine Skill update (2026-11-27)
+
+The Game Release Guard name and one core Skill now cover Unity, Unreal, Godot, Cocos Creator and GameMaker. Engine guidance is authored here from official documentation, not copied from engine implementations. No new engine, runtime adapter, dependency or proprietary binary is bundled. The Python module and CLI retain `steam_release_guard` compatibility.
+
+Context7 was consulted for Godot's official docs, Cocos's official docs and the GameMaker manual. These indexes were not version-locked; claims were checked against [Godot 4.5 PCK/template documentation](https://docs.godotengine.org/en/4.5/engine_details/development/compiling/compiling_with_script_encryption_key.html), Cocos [3.8](https://docs.cocos.com/creator/3.8/manual/en/editor/publish/native-options.html) and [4.0](https://docs.cocos.com/creator/4.0/manual/en/editor/publish/native-options.html) Native options, and the [GameMaker monthly compilation manual](https://manual.gamemaker.io/monthly/en/Introduction/Compiling.htm). Exact versions, API references and limits are listed in each [engine guide](../skills/game-release-guard/SKILL.md). Older/other versions require their own check.
+
+One Skill routes to a matching engine document; its MIT archive includes only the core, five guides, bilingual setup/examples and license. Synthetic fixtures validate AI behavior, not engine products. The existing OpenGame-inspired navigation below remains a generic Markdown entry point, with no imported service configuration, prompts or code.
+
 Checked 2026-11-25 (Asia/Tokyo). No third-party implementation was copied, bundled or installed. Runtime uses Python's standard library; the Unity adapter calls Unity's own Editor API. No art, audio, game assets or Steam SDK binaries are redistributed.
 
 ## Official references

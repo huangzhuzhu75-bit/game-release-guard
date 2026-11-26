@@ -22,7 +22,7 @@ Gitleaks 与 Git diff 空白检查通过。原有失败暂存/安全清理用例
 
 首轮 CI 的 Windows / Python 3.10 出现 Tk 测试对象的跨线程回收错误：前一测试已销毁的窗口仍有循环引用，被后一测试的工作线程回收。测试现在在主线程 tearDown 中回收已销毁的对象；保留全部回调和断言，没有禁用 GUI 测试或放宽备份检查。兼容性结果以修复后的 CI 为准。
 
-修复后的实现提交为 92d2171b：[push CI](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions/runs/45607736801) 和 [PR CI](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions/runs/45607744127) 的 Windows/Linux × Python 3.10/3.12 四组合全部成功。Windows 3.10 日志为 74 项全部通过，无 Tk 错误。平台不适用的测试按既有条件跳过；Linux 无桌面的 GUI 跳过不等同于 Linux 原生 GUI 验收。
+修复后的实现提交为 92d2171b：[push CI](https://github.com/huangzhuzhu75-bit/game-release-guard/actions/runs/45607736801) 和 [PR CI](https://github.com/huangzhuzhu75-bit/game-release-guard/actions/runs/45607744127) 的 Windows/Linux × Python 3.10/3.12 四组合全部成功。Windows 3.10 日志为 74 项全部通过，无 Tk 错误。平台不适用的测试按既有条件跳过；Linux 无桌面的 GUI 跳过不等同于 Linux 原生 GUI 验收。
 
 ## 真实工程的全量备份与恢复
 

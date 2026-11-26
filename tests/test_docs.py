@@ -10,9 +10,10 @@ from steam_release_guard.cli import parser
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCUMENTS = [ROOT / name for name in ("README.md", "README.en.md", "CONTRIBUTING.md", "docs/USAGE.zh-CN.md", "AI-START.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md",
-                                    "skills/steam-release-guard/SKILL.md")]
+                                    "skills/game-release-guard/SKILL.md")]
 DOCUMENTS += sorted((ROOT / "workflows").glob("*.md"))
-DOCUMENTS += [ROOT / "skills/steam-release-guard" / name for name in ("INSTALL.md", "INSTALL.en.md", "EXAMPLES.md")]
+DOCUMENTS += [ROOT / "skills/game-release-guard" / name for name in ("INSTALL.md", "INSTALL.en.md", "EXAMPLES.md", "EXAMPLES.en.md")]
+DOCUMENTS += sorted((ROOT / "skills/game-release-guard/engines").glob("*.md"))
 
 
 class MarkdownTests(unittest.TestCase):
@@ -55,11 +56,11 @@ class MarkdownTests(unittest.TestCase):
                     self.assertTrue(target.is_file(), str(target))
 
     def test_skill_frontmatter_and_all_project_entries_reference_canonical_source(self):
-        text = (ROOT / "skills/steam-release-guard/SKILL.md").read_text(encoding="utf-8")
+        text = (ROOT / "skills/game-release-guard/SKILL.md").read_text(encoding="utf-8")
         header = re.match(r"^---\n(.*?)\n---\n", text, re.S)
         self.assertIsNotNone(header)
         metadata = dict(line.split(": ", 1) for line in header.group(1).splitlines())
-        self.assertEqual(metadata["name"], "steam-release-guard")
+        self.assertEqual(metadata["name"], "game-release-guard")
         self.assertTrue(0 < len(metadata["description"]) < 1024)
         for name in ("AGENTS.md", "CLAUDE.md", "GEMINI.md", "AI-START.md", "README.md"):
-            self.assertIn("skills/steam-release-guard/SKILL.md", (ROOT / name).read_text(encoding="utf-8"))
+            self.assertIn("skills/game-release-guard/SKILL.md", (ROOT / name).read_text(encoding="utf-8"))

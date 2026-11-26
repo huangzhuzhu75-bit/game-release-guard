@@ -4,16 +4,18 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "skills" / "steam-release-guard"
-OUTPUT = ROOT / "downloads" / "steam-release-guard-skill.zip"
-FILES = ("SKILL.md", "LICENSE", "INSTALL.md", "INSTALL.en.md", "EXAMPLES.md", "EXAMPLES.en.md")
+SOURCE = ROOT / "skills" / "game-release-guard"
+OUTPUT = ROOT / "downloads" / "game-release-guard-skill.zip"
+FILES = ("SKILL.md", "LICENSE", "INSTALL.md", "INSTALL.en.md", "EXAMPLES.md", "EXAMPLES.en.md",
+         "engines/unity.md", "engines/unreal.md", "engines/godot.md",
+         "engines/cocos-creator.md", "engines/gamemaker.md")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="check the archive without changing it")
     args = parser.parse_args()
-    contents = {"steam-release-guard/" + name: (SOURCE / name).read_text(encoding="utf-8").encode("utf-8")
+    contents = {"game-release-guard/" + name: (SOURCE / name).read_text(encoding="utf-8").encode("utf-8")
                 for name in FILES}
     if args.check:
         with zipfile.ZipFile(OUTPUT) as archive:
@@ -22,7 +24,7 @@ def main():
             for name, data in contents.items():
                 if archive.read(name) != data:
                     raise SystemExit("Skill ZIP is out of date. Run python scripts/package_skill.py")
-        print("Skill ZIP matches all 6 public Markdown/license source files.")
+        print(f"Skill ZIP matches all {len(FILES)} public Markdown/license source files.")
         return
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(OUTPUT, "w", compression=zipfile.ZIP_STORED) as archive:
@@ -31,7 +33,7 @@ def main():
             info.create_system = 3
             info.external_attr = 0o100644 << 16
             archive.writestr(info, data)
-    print("Created downloads/steam-release-guard-skill.zip (6 public files).")
+    print(f"Created downloads/game-release-guard-skill.zip ({len(FILES)} public files).")
 
 
 if __name__ == "__main__":

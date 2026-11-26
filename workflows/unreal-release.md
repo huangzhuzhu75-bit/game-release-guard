@@ -1,6 +1,6 @@
 # Unreal Engine 5 Windows 发布流程
 
-前置阅读：[统一操作规则](../skills/steam-release-guard/SKILL.md)。以下命令在工具仓库根目录运行；替换占位目录，保留原工程。
+前置阅读：[统一操作规则](../skills/game-release-guard/SKILL.md)。以下命令在工具仓库根目录运行；替换占位目录，保留原工程。
 
 本页用于用户要求发布适配的场景。仅检查已有工程时，按 Skill 在对话中给出发现，不默认执行本页流程；audit 会写本地报告，须在用户要求报告后执行。apply 的授权范围包含配置修改、完整备份和本地报告。
 

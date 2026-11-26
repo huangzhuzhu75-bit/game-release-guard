@@ -6,7 +6,7 @@ This record separates software integration from real-game acceptance. It contain
 
 1. PR #2 HEAD `3c452865bd611d7afdfad5991cfedb911ba4b56a` contained the targeted Pak/IoStore and explicit-container fixes. Both four-environment CI runs passed; no unresolved review threads or blocking reviews were present.
 2. PR #2 was merged into `v2/p0-and-ai-guides` using merge commit `dbb4fb11fe6df71eeb43376d3e5a46e21e1341b9`.
-3. PR #1 was rechecked at that new HEAD. Its [PR matrix](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions/runs/45837401017) and [branch matrix](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions/runs/45837388460) both passed Windows/Linux × Python 3.10/3.12. No unresolved review or conflict was present.
+3. PR #1 was rechecked at that new HEAD. Its [PR matrix](https://github.com/huangzhuzhu75-bit/game-release-guard/actions/runs/45837401017) and [branch matrix](https://github.com/huangzhuzhu75-bit/game-release-guard/actions/runs/45837388460) both passed Windows/Linux × Python 3.10/3.12. No unresolved review or conflict was present.
 4. PR #1 was merged into main with `71ce52b51a25a077e8d655953a24222cbc93ae6f`. Both merge commits retain their parents. The integrated tree is `a324da18c0e157f7acf49566bbaa30529a789fa7`, exactly the reviewed P3 tree: 72 tracked files, including P0, Skill and all P3 modules/tests.
 
 按 PR #2 → PR #1 的依赖顺序合并，未用 P3 覆盖 main、未压缩或删除开发历史。整合提交的代码树与已验收候选一致。
