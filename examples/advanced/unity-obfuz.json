@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "engine_version": "6000.6.6f1",
+  "adapter": "obfuz",
+  "tool_version": "4.0.0",
+  "assemblies": [
+    {"name": "Game.Core", "include_types": ["Game.Core.LocalRules"], "exclude_types": ["Game.Core.Save*", "Game.Core.Network*"], "rename_fields": false}
+  ],
+  "reference_assemblies": ["Assembly-CSharp"],
+  "strings": false,
+  "control_flow": false
+}
