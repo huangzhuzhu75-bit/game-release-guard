@@ -9,13 +9,20 @@ from pathlib import Path
 from steam_release_guard.cli import parser
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCUMENTS = [ROOT / name for name in ("README.md", "AI-START.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md",
+DOCUMENTS = [ROOT / name for name in ("README.md", "README.en.md", "CONTRIBUTING.md", "docs/USAGE.zh-CN.md", "AI-START.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md",
                                     "skills/steam-release-guard/SKILL.md")]
 DOCUMENTS += sorted((ROOT / "workflows").glob("*.md"))
-DOCUMENTS += [ROOT / "skills/steam-release-guard" / name for name in ("INSTALL.md", "EXAMPLES.md")]
+DOCUMENTS += [ROOT / "skills/steam-release-guard" / name for name in ("INSTALL.md", "INSTALL.en.md", "EXAMPLES.md")]
 
 
 class MarkdownTests(unittest.TestCase):
+    def test_bilingual_readmes_keep_identical_cli_examples(self):
+        def commands(name):
+            return [shlex.split(line) for line in (ROOT / name).read_text(encoding="utf-8").splitlines()
+                    if line.startswith("python -m steam_release_guard ")]
+        self.assertTrue(commands("README.md"))
+        self.assertEqual(commands("README.md"), commands("README.en.md"))
+
     def test_documented_commands_parse_with_real_cli(self):
         commands = 0
         for path in DOCUMENTS:
@@ -25,7 +32,7 @@ class MarkdownTests(unittest.TestCase):
                     continue
                 args = shlex.split(line)[3:]
                 with self.subTest(file=path.name, command=line), contextlib.redirect_stdout(io.StringIO()):
-                    if args in (["--version"], ["--help"]):
+                    if args in (["--version"], ["--help"], ["advanced", "--help"]):
                         with self.assertRaises(SystemExit) as caught:
                             parser().parse_args(args)
                         self.assertEqual(caught.exception.code, 0)

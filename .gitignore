@@ -8,5 +8,15 @@ __pycache__/
 *.bundle
 *.zip
 .env
+.env.*
+!.env.example
 *.key
 *.pem
+*.pdb
+*.mdb
+*.srg-backups/
+DefaultCrypto.ini
+Crypto.json
+*.pak
+*.utoc
+*.ucas

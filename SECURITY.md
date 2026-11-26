@@ -14,3 +14,15 @@ Steam Release Guard is a local release review aid. It does not claim to prevent 
 - Always retain your own project version control and off-machine recovery plan. Local recovery journals do not replace a complete project backup.
 
 If reporting a defect, provide the tool version, command, sanitized file layout and a minimal synthetic reproduction. Do not post game assets, Steam secrets, private symbols or encryption keys in issues.
+
+## Reporting a vulnerability
+
+This is an early-development project, not a supported stable security product. If the repository Security page offers **Report a vulnerability**, use that private channel. If it is unavailable, open an Issue asking for a private contact route without posting exploit details or confidential data. Do not attach a real game, backup, credential or private build. A maintainer response time is not guaranteed.
+
+If a real credential has already been disclosed, its owner should revoke/rotate it and review accessible history, branches, logs and artifacts. Removing only the current file does not remove past exposure. This project will not rotate a user's keys automatically.
+
+## 中文安全报告说明
+
+项目仍处于早期开发，不是有稳定支持承诺的安全产品。仓库 Security 页面如提供 **Report a vulnerability**，请使用其私有渠道；未提供时，可提交不含漏洞利用细节的 Issue 请求私下联系。不要附真实游戏、备份、凭据或私有构建，不承诺固定响应时限。
+
+真实凭据泄露后，由责任人撤销/轮换，并检查可访问历史、分支、日志和附件；只删除当前文件不能消除历史泄露。本工具不会替用户自动轮换密钥。详细限制见上文及中英文 README。

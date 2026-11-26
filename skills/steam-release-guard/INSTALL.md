@@ -1,12 +1,14 @@
+[简体中文](INSTALL.md) | [English](INSTALL.en.md)
+
 # 独立安装与 Markdown 使用
 
 只需 `SKILL.md` 即可阅读和使用。分发时保留 [LICENSE](LICENSE)；本目录的 [EXAMPLES.md](EXAMPLES.md) 提供提示词。无需 Python、Release Guard、插件后台或全局 AI 配置。只有调用 Release Guard CLI 时才需要完整工具仓库及已有 Python 3.10+。
 
 ## 下载
 
-在有仓库访问权的 GitHub 账号中打开 [SKILL.md 源文件](https://github.com/huangzhuzhu75-bit/steam-release-guard/blob/v2/p0-and-ai-guides/skills/steam-release-guard/SKILL.md)，选择 Raw/Download raw file，保存为 UTF-8 的 `SKILL.md`，不要保存 GitHub 网页。另下载本目录 LICENSE。也可以从仓库 ZIP 中只取出 `skills/steam-release-guard/` 文件夹。
+打开 main 上的 [SKILL.md 源文件](https://github.com/huangzhuzhu75-bit/steam-release-guard/blob/main/skills/steam-release-guard/SKILL.md)，选择 Raw/Download raw file，保存为 UTF-8 的 `SKILL.md`，不要保存 GitHub 网页。另下载本目录 LICENSE。也可以从仓库 ZIP 中只取出 `skills/steam-release-guard/` 文件夹。
 
-当前仓库私有，未获得访问权的人不能直接下载；此说明不改变仓库可见性。候选版本尚在 `v2/p0-and-ai-guides` 分支，合并前不要从 main 假定取得最新版。可将经过核验的整个 `steam-release-guard/` 文件夹单独打成 ZIP 分享给获授权的使用者，里面不包含游戏代码或资源。
+P0、P3 和 Skill 已按依赖顺序整合到 main。可以直接使用 [Raw 文件](https://raw.githubusercontent.com/huangzhuzhu75-bit/steam-release-guard/main/skills/steam-release-guard/SKILL.md) 和 [Raw 许可证](https://raw.githubusercontent.com/huangzhuzhu75-bit/steam-release-guard/main/skills/steam-release-guard/LICENSE)。可单独打包整个 `steam-release-guard/` 文件夹，保留双语安装说明和许可；不要包含任何游戏代码或资源。核心 Skill 正文目前为中文，只有一个知识源。
 
 ## 只安装到自己的游戏项目
 
@@ -45,3 +47,5 @@ Gemini 当前官方文档还允许 `.agents/skills` 别名；表中选择独立�
 - [Claude Code Skills](https://code.claude.com/docs/en/skills)、[CLAUDE.md 导入](https://code.claude.com/docs/en/memory)。
 - [Codex Skills](https://developers.openai.com/codex/skills)、[AGENTS.md](https://developers.openai.com/codex/guides/agents-md)。
 - [Gemini CLI Skills](https://geminicli.com/docs/cli/skills/)、[GEMINI.md](https://geminicli.com/docs/cli/gemini-md/)。
+
+[简体中文](INSTALL.md) | [English](INSTALL.en.md)

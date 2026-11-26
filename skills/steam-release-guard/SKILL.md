@@ -110,7 +110,7 @@ Skill 是对 AI 的操作指引，不是权限隔离或防泄漏执行器；仍�
 
 独立 Skill 不包含 CLI。需要调用工具时，定位用户实际下载的 Steam Release Guard，读取其 `README.md`、对应 `workflows/*.md` 和实际实现：`steam_release_guard/cli.py`（参数/副作用）、`core.py`、相关 `gui.py`、`project_backup.py`、`transactions.py` 或 `staging.py`。再查看本地 `--help`。文件或命令不存在就停止那项调用，不能创造命令、远程下载执行或自动安装依赖。
 
-以下是仓库 **0.2.0.dev0 / V2 P0 + P3 候选**的已知行为；新版本以本地代码为准。它使用 Python 3.10+ 标准库，GUI 另需 tkinter，适配 Unity 6 / UE5 Windows 基础发布配置。P3 另有 `advanced` CLI：Obfuz 4.0.0 显式名单符号混淆适配、UE 独立 CryptoKeys 配置与 Pak/IoStore 工具检查、文件完整性、只读客户端风险检查和三层验收。真实游戏保护效果未验证；字符串/控制流暂拒绝启用，没有 metadata 加密、自动资源分块、后端改写或 SteamPipe 自动发布。P0 尚未批准合并。
+以下是仓库 **0.2.0.dev0 / V2 P0 + P3 候选**的已知行为；新版本以本地代码为准。它使用 Python 3.10+ 标准库，GUI 另需 tkinter，适配 Unity 6 / UE5 Windows 基础发布配置。P3 另有 `advanced` CLI：Obfuz 4.0.0 显式名单符号混淆适配、UE 独立 CryptoKeys 配置与 Pak/IoStore 工具检查、文件完整性、只读客户端风险检查和三层验收。真实游戏保护效果未验证；字符串/控制流暂拒绝启用，没有 metadata 加密、自动资源分块、后端改写或 SteamPipe 自动发布。P0、P3 和 Skill 已整合到 main；整合不代表真实游戏保护效果已验收。
 
 只有确实需要 P3 时，读取 `workflows/advanced-protection.md`、`steam_release_guard/advanced/cli.py` 和对应实现，再核对本地 `advanced --help`。高级只读检查默认只输出对话结果；构建/配置写入需要相应授权和预览，Unity 引擎执行只允许完整备份恢复的新副本。缺工具或版本不符就说明原因，不代为安装。文件完整性匹配不是防破解证明；验收中的 RECORDED_PASS 只是用户声明和证据文件哈希匹配，不能当独立实机验收。
 

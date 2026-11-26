@@ -1,189 +1,180 @@
-# Steam Release Guard
+<p align="center"><a href="README.md">简体中文</a> | <a href="README.en.md">English</a></p>
 
-**给 Unity 6 / Unreal Engine 5 的 Windows、Steam 发布流程做可回滚的一键适配。**
+![Steam Release Guard — Protect your game. From day one.](docs/assets/hero.svg)
 
-本地桌面界面 + 无第三方 Python 依赖的 CLI。分别检查代码可读性、开发调试入口和资源暴露，生成 HTML / JSON 报告。不会联网扫描工程、收集遥测或上传游戏。
+<h1 align="center">Steam Release Guard</h1>
+<p align="center"><strong>Protect your game. From day one.</strong><br/>从开发第一天开始，保护你的游戏。</p>
+<p align="center">为 Unity 和 Unreal 独立游戏开发者提供可复用的安全开发与发行保护工具，结合 AI 安全编程 Skill 和本地化发行加固工具。</p>
 
-这是一套发布加固与检查工具，不是反盗版保证、资源加密壳或反作弊系统。当前分支在 **V2 P0 验收候选**上增加 **P3 高级保护候选**，保留 Python 3.10+ 标准库架构、旧 CLI、GUI、报告与完整备份/回滚。P0 尚未人工验收合并；P3 真实引擎打包、游戏运行和 Steam 测试分支仍未验证。
+<p align="center"><a href="README.md">简体中文</a> | <a href="README.en.md">English</a></p>
 
-## P3 高级保护候选
+[![CI](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions/workflows/test.yml)
+[![Early Development](https://img.shields.io/badge/status-Early%20Development-466985)](#status)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3675a8)](#quick-start)
+[![MIT](https://img.shields.io/badge/license-MIT-71869b)](LICENSE)
 
-按 [高级保护工作流](workflows/advanced-protection.md) 使用新增 `advanced` CLI。原 GUI 继续处理基础适配/备份/回滚；高级功能暂通过 CLI 操作，不会随“一键适配”默认开启。
+**Early Development / Advanced Protection Candidate。** P0、P3 和独立 Skill 已整合到 `main`，程序版本仍为 `0.2.0.dev0`；不宣称 Stable / Production Ready。通过 [main ZIP](https://github.com/huangzhuzhu75-bit/steam-release-guard/archive/refs/heads/main.zip) 或 Git 获取源码。[Releases](https://github.com/huangzhuzhu75-bit/steam-release-guard/releases) 只展示实际发布内容，当前没有稳定发行包。
 
-| 功能 | 已提供 | 当前边界 |
+[快速开始](#quick-start) · [安装 Skill](#ai-skill) · [能力与状态](#advanced) · [安全边界](#boundaries) · [验证证据](#validation)
+
+## 核心功能
+
+| 工作方式 | 你可以得到什么 |
+|---|---|
+| **Secure Development** | 一个统一 Skill，从新游戏项目的第一天考虑代码组织、敏感数据、调试隔离和服务端权威性。 |
+| **Security Audit** | AI 在对话中指出已有工程的具体文件、风险原因和建议；默认只读，不擅自改代码或生成报告。 |
+| **Release Guard** | 本地 CLI + Tkinter GUI：完整备份、恢复新副本、配置适配、发布包检查、符号分离和回滚。 |
+| **Advanced Protection** | 显式启用 Obfuz 适配、原生/元数据检查、Pak/IoStore 检查、文件完整性及构建证据流程。 |
+
+<a id="quick-start"></a>
+## 30 秒快速开始
+
+**只想让 AI 遵守规范？直接读 [SKILL.md](skills/steam-release-guard/SKILL.md)，不需要 Python。**
+
+本地工具需要已有 **Python 3.10+**；GUI 另需 `tkinter`。标准库实现，无需 `pip install`，不会自动安装 Python、引擎或保护器。适配面向 Windows / Steam；Linux CI 验证工具逻辑，不代表支持 Linux 游戏构建。
+
+```shell
+git clone https://github.com/huangzhuzhu75-bit/steam-release-guard.git
+cd steam-release-guard
+python -m steam_release_guard --help
+```
+
+Windows 可双击 `Launch.cmd` 打开 GUI。找不到 Python 时，将已有解释器路径写入 `.local/python-path.txt` 或设置进程变量 `SRG_PYTHON`。把下面路径换成自己的**测试副本**，先预览：
+
+```powershell
+python -m steam_release_guard plan "D:/Games/MyGame-Copy"
+python -m steam_release_guard apply "D:/Games/MyGame-Copy" --dry-run --json
+```
+
+首次使用真实工程：关闭引擎和同步工具 → 完整备份 → 核验 → 恢复新目录 → 在副本尝试。`apply` 有修改时仍必须再次完成工程外的完整备份，失败就停止；写入前审阅并明确确认，`--yes` 不是自动授权。[备份流程](workflows/backup.md) · [详细操作参考](docs/USAGE.zh-CN.md)
+
+<details>
+<summary>备份、检查与恢复命令</summary>
+
+```powershell
+python -m steam_release_guard backup "D:/Games/MyGame" --backup-dir "D:/PrivateBackups/MyGame" --dry-run --json
+python -m steam_release_guard backup "D:/Games/MyGame" --backup-dir "D:/PrivateBackups/MyGame" --yes --json
+python -m steam_release_guard backup-verify "D:/PrivateBackups/MyGame/BACKUP_ID" --json
+python -m steam_release_guard backup-restore "D:/PrivateBackups/MyGame/BACKUP_ID" --output "D:/Games/MyGame-Copy" --dry-run --json
+python -m steam_release_guard backup-restore "D:/PrivateBackups/MyGame/BACKUP_ID" --output "D:/Games/MyGame-Copy" --yes --json
+python -m steam_release_guard audit "D:/Games/MyGame-Copy" --build "D:/Builds/MyGame-v1"
+python -m steam_release_guard stage "D:/Builds/MyGame-v1" --release "D:/Release/MyGame-v1" --symbols "D:/PrivateSymbols/MyGame-v1" --dry-run --json
+python -m steam_release_guard stage-cleanup "D:/PrivateSymbols/MyGame-v1/srg-stage-journal.json" --dry-run --json
+python -m steam_release_guard rollback "D:/Games/MyGame-Copy" --dry-run --json
+python -m steam_release_guard build-script "D:/Games/MyGame-Copy" --tool "D:/Engines/Unity/Editor/Unity.exe" --output "D:/Builds/MyGame-v2" --save "D:/Builds/build-my-game-v2.ps1" --dry-run --json
+python -m steam_release_guard advanced --help
+```
+
+`BACKUP_ID` 换成返回的真实目录名。恢复目标必须不存在；stage 的三个目录不能嵌套，发布/私有符号目录必须新建或为空。`audit` **会写 HTML/JSON 报告**，即使带 `--json`；AI 默认只读检查不应自动调用它。构建脚本只生成、不执行。旧 CLI、GUI、报告与回滚入口保留。
+
+[Unity](workflows/unity-release.md) · [Unreal](workflows/unreal-release.md) · [发布包检查](workflows/security-audit.md) · [回滚与清理](workflows/rollback.md)
+</details>
+
+<a id="ai-skill"></a>
+## AI Skill 安装
+
+唯一核心是 [skills/steam-release-guard/SKILL.md](skills/steam-release-guard/SKILL.md)，可独立下载，分发时保留同目录 [LICENSE](skills/steam-release-guard/LICENSE)。核心正文目前为中文，安装入口提供中英文。不依赖 Python 工具，不建立 AI 后台，不修改全局配置。
+
+| AI 工具 | 项目级安装路径 | 实际验证状态 |
 |---|---|---|
-| Unity Obfuz 4.0.0 | 包检测、显式类型名单/排除、字段开关、Editor 构建桥接、完成事件与程序集证据、私有日志/映射 | Unity 6000.6.6f1 实际 API 编译通过；真实混淆/IL2CPP 运行未验证。字符串/控制流暂拒绝启用 |
-| IL2CPP / 原生插件 | PE/托管结构、元数据头、依赖、调试符号、敏感字面量候选 | **没有实施 metadata 加密**，不改引擎或删除 DLL |
-| UE Pak / IoStore | 显式容器策略、独立 CryptoKeys 开关、原 key 保留及回滚；PakFileUtilities / IoStoreUtilities 各自帮助检查与记录 | UE 5.6 IoStore 模块通过官方 `UnrealPak.exe IoStore` 入口调用；缺少版本/参数证据则 NOT_VERIFIED。签名/加密效果和运行未验证 |
-| A/B/C 资源策略 | 显式路径分级、加载与补丁成本建议 | 分类不等于已加密，不自动创建 Chunk 或修改资源加载逻辑 |
-| 完整性 / DRM 产物 | SHA256 版本清单、独立可信 pin、变更/缺失/新增检测、原 EXE 与输出 PE 检查 | 没有自动游戏内执行；客户端校验可被绕过，未调用 Steam Wrapper |
-| 多人游戏安全 | 具体文件/行号的只读风险定位、已有 authority 宏线索、服务器设计建议 | 启发式检查，不证明服务端校验缺失或安全，不改服务器 |
-| 性能 / 验收 | 基线/候选文件绑定、测量样本对比、配置/产物/运行证据分层 | 无实机数据不标 PASS，人工 PASS 声明只记 RECORDED_PASS |
+| OpenAI Codex | `.agents/skills/steam-release-guard/SKILL.md` | **Tested**：原生读取和 4 个合成场景，不是实际游戏安全认证。 |
+| Claude Code | `.claude/skills/steam-release-guard/SKILL.md` | **Not Verified**：按官方格式提供说明，未实测客户端。 |
+| Gemini CLI | `.gemini/skills/steam-release-guard/SKILL.md` | **Not Verified**：按官方格式提供说明，未实测客户端。 |
+| 其他 Markdown / Skills 工具 | 项目内文档目录 | 提供 Markdown 兼容方案，未验证原生发现或客户端行为。 |
 
-完整审查、授权/维护和兼容性风险见 [P3 审查](docs/P3-REVIEW.md)；实际测试范围见 [P3 验证记录](docs/P3-VALIDATION.md)。不会强制安装第三方工具、生成/轮换生产密钥或上传游戏文件。
+保留已有指令，勿覆盖同名文件。让 AI 先说出实际读取路径；也可以不安装，直接要求：
 
-UE 高级策略现在使用 **schema 2**，必须明确选择 `container_policy`：`pak-only` 或 `pak+iostore`。`iostore-only` 在当前 Windows/UAT 适配范围内没有已验证的独立组合，因此在写入前停止并说明原因，不自动改成 Pak。旧 schema 1 不会自动迁移；先按 [示例](examples/advanced/unreal-policy.json) 选择策略，再运行 `unreal-plan` / `unreal-apply --dry-run` 核对。容器选择与加密开关分开，不再因开启加密而隐式启用 Pak。
+> 完整阅读指定的 SKILL.md，先核对工程和引擎版本。检查已有工程时，只在对话中说明文件位置、风险和建议；不修改、不生成报告、不上传源码。无法核实的保护标为 NOT_VERIFIED。
 
-## 独立游戏安全开发 Skill
+[中文安装](skills/steam-release-guard/INSTALL.md) · [English installation](skills/steam-release-guard/INSTALL.en.md) · [使用示例](skills/steam-release-guard/EXAMPLES.md) · [平台验收](docs/SKILL-VALIDATION-20261125.md)
 
-唯一核心文件是 **[skills/steam-release-guard/SKILL.md](skills/steam-release-guard/SKILL.md)**，可以单独下载使用，不依赖本工具或 Python。新 Unity/Unreal 项目按其规则开发；已有工程默认只读检查，在对话中指出文件位置、风险和建议，不改代码、不生成报告。需要 CLI 适配时才读取本仓库的真实命令。
+## Unity 功能
 
-阅读 **[安装说明](skills/steam-release-guard/INSTALL.md)**、**[使用示例](skills/steam-release-guard/EXAMPLES.md)** 或 **[AI-START.md](AI-START.md)**。优先提供项目级 Claude Code、Codex、Gemini CLI 安装路径；其他工具直接读 Markdown。无需安装新的 AI 客户端，也不修改全局设置。
+- Unity 6 Editor-only 入口安装到 `Assets/SteamReleaseGuard/Editor/`，安装本身不改 `PlayerSettings`。专用菜单构建 Windows x64 IL2CPP、非开发版本，关闭脚本调试/Profiler。
+- 只校验本工具自己的构建入口；普通 Build、自定义流水线、Addressables、AssetBundles 需另行集成。当前拒绝自定义 Build Profile，避免忽略场景和设置覆盖。
+- 正常退出恢复设置；强退/崩溃后须人工检查。Obfuz 构建只在核验过的备份恢复副本执行。
+- Obfuz 4.0.0 使用明确类型名单、排除名单，默认保留字段，保存私有映射和程序集证据。字符串/控制流保护暂拒绝启用，没有 metadata 加密。
+- IL2CPP 仍有可分析的原生代码、字符串和 metadata；不要删除 `global-metadata.dat` 或运行必需的插件。
 
-实际读取、四个合成场景、未验证平台和独立包校验见 [Skill 验收记录](docs/SKILL-VALIDATION-20261125.md)。这份 Skill 的知识指导不表示已给游戏实施深度保护。
+## Unreal 功能
 
-项目提供 `AGENTS.md`、`CLAUDE.md`、`GEMINI.md` 入口和五份工作流：[完整备份](workflows/backup.md)、[Unity](workflows/unity-release.md)、[Unreal](workflows/unreal-release.md)、[安全与发布包检查](workflows/security-audit.md)、[回滚](workflows/rollback.md)。不支持原生 Skills 的工具直接阅读 Markdown；没有 AI 管理服务、工具扫描/安装、MCP/ACP/Hooks 管理器或全局配置修改。未安装客户端的实际读取不标为已验证。
+- 基础适配提供 Shipping、关闭随包调试文件及配置检查；GUID/源码引擎关联不能视为已识别版本。平台覆盖、Target 规则和 UAT 日志需另行检查。
+- 高级 schema 2 明确选择 `pak-only` 或 `pak+iostore`，各 CryptoKeys 开关独立，保留密钥和回滚。当前 Windows/UAT profile 的 `iostore-only` 未验证，写入前停止；旧 schema 1 不自动迁移。
+- Pak / IoStore 独立检查版本、帮助参数和记录。UE 5.6 IoStoreUtilities 使用官方 `UnrealPak.exe IoStore` 模块入口；缺工具、版本或参数不符记 NOT_VERIFIED。
+- 基础兼容参数 `--encrypt-pak-index` 会设置 `UsePakFile=True` 并保留 `bUseIoStore`，使用前必须审核这一容器变化；索引加密不等于资源主体或 IoStore 加密。
+- AES 只检查已有非零 32 字节密钥；签名字段编码检查不是 RSA key 对/签名有效性证明。不生成或轮换生产密钥，不自动开启全资源加密。
 
-## 双击使用
+<a id="advanced"></a>
+## 高级保护：能力与状态
 
-1. 下载并解压仓库；本机需有 **Python 3.10+，含 tkinter**。无需 `pip install`，无需管理员权限。引擎构建另需原工程对应的引擎、许可证和 Windows 构建组件。
-2. 双击 **`Launch.cmd`**。如果自动寻找 Python 失败，把已有 `python.exe` 的完整路径写入 `.local/python-path.txt`，或设置进程环境变量 `SRG_PYTHON`。工具不会自行下载 Python。
-3. 选择工程根目录，先点击“检查工程 / 发布包”或运行 `plan`。首次试用先关闭引擎和同步工具，点击 **完整备份**，完成后用 **恢复完整备份…** 创建新副本，再把“工程目录”切换到该副本。
-4. 点击 **一键适配**，审阅修改范围与完整备份位置。工具先复制并核验所选工程的全部文件，成功后才开始适配；失败就停止。
-5. 通过“生成构建脚本…”生成并运行对应版本的构建命令；Unity 也可直接使用新增的菜单入口。选择实际发布包，再执行检查。
-6. 如需分离符号，选择三个互不嵌套的目录：原构建、空发布目录、空私有符号目录。复制并校验后，对新发布目录重新检查。
+<a id="status"></a>
+**Implemented** = 代码已提供；**Tested** = 指定范围已测试；**Not Verified** = 缺实际证据；**Not Implemented** = 尚未提供。实现、测试和保护效果是不同层级。
 
-“一键”指配置适配、安装 Unity 构建入口和生成检查报告；它不会替你安装引擎、判断插件兼容性、打包上传 Steam 或批准游戏上线。
+| 能力 | 已实现 / 已测试 | 未验证 / 未实现 |
+|---|---|---|
+| 备份、事务、回滚、CLI / GUI | **Implemented · Tested**：合成工程、失败恢复、真实 Tk 回调 | 不保证硬件断电、工程外依赖或跨主机恢复 |
+| Obfuz 适配 | **Implemented · Tested**：合成测试；Unity 6000.6.6f1 + 固定源码 API 编译 | **Not Verified**：混淆构建、启动、反射、存档、RPC、插件 |
+| IL2CPP / 原生模块检查 | **Implemented · Tested**：PE、依赖、metadata 头、敏感候选 | **Not Implemented**：metadata 加密；**Not Verified**：IL2CPP 游戏运行 |
+| Pak / IoStore | **Implemented · Tested**：策略、密钥保留、独立调用/证据的合成测试 | **Not Verified**：真实 UE 加密/签名、资源加载、DLC、补丁 |
+| A/B/C 资源分级 | **Implemented · Tested**：分类及成本建议 | **Not Implemented**：自动分块、分级加密、加载器改写 |
+| 完整性 / DRM 产物 | **Implemented · Tested**：SHA256、外部可信 pin、build-id、变化和 PE 检查 | **Not Implemented**：游戏内自动集成；**Not Verified**：Steam Wrapper / 测试分支 |
+| 客户端安全检查 | **Implemented · Tested**：文件/行号候选、已有保护线索 | 启发式检查，不能证明服务端安全或漏洞可达性 |
+| 性能 / 三层验收 | **Implemented · Tested**：样本、证据哈希、指标对照 | **Not Verified**：真实启动、加载、内存、CPU、包体、补丁、崩溃、联机及存档性能 |
 
-## 先保留完整工程，再尝试
+高级操作通过显式 `advanced` 命令启用，GUI 基础适配不会默认运行它们。[P3 工作流](workflows/advanced-protection.md) · [第三方来源与许可](docs/P3-REVIEW.md) · [metadata 边界](docs/P3-METADATA.md)
 
-每次有文件需要修改的 `apply` 都先创建独立的 **完整工程文件备份**，没有跳过备份开关。默认在工程旁的 `<工程名>.srg-backups/<时间编号>/`，也可用 GUI“备份位置…”或 CLI `--backup-dir` 选择工程外的目录。目录里是 `project/` 原文件副本和 `srg-project-backup.json` 校验清单。
+<a id="boundaries"></a>
+## 安全边界
 
-- 复制工程目录内全部普通文件、隐藏文件、`.git`、`.meta`、资源、配置、缓存、已有构建和空目录，不按 Git 忽略规则省略。工程大，备份和核验就需要相应空间与时间。
-- 源文件和副本均重新核验 SHA256；磁盘不足、文件占用、源文件变化、损坏或取消都会停止，INCOMPLETE 备份不能用于恢复。已完成备份不自动删除。
-- 点击“完整备份”可先单独备份；点击“恢复完整备份…”会核验后创建**新的工程副本**，保留当前工程。首次试用可先恢复副本，再对副本适配。
-- 这是工程根目录内的文件内容备份。工程外的本地依赖、玩家存档、引擎和系统环境不在范围内；链接/连接点直接拒绝，不能跳过后假称完整。文件所有者、ACL、NTFS 备用数据流和完整文件系统元数据不保证保留。操作前关闭编辑器和同步工具；不提供系统快照或硬件故障保证。
+**配置 ≠ 构建产物 ≠ 真实运行。** 退出码 0、扩展名、Shipping、IL2CPP、压缩或索引加密都不是防破解证明。`REVIEW` / `NOT_VERIFIED` 不升级为 PASS；`RECORDED_PASS` 只表示声明与证据文件匹配，不是独立实机验收。
 
-```powershell
-python -m steam_release_guard backup 'D:/Games/MyGame' --backup-dir 'D:/PrivateBackups/MyGame' --dry-run --json
-python -m steam_release_guard backup 'D:/Games/MyGame' --backup-dir 'D:/PrivateBackups/MyGame' --yes --json
-# 将“时间编号”替换为上一条输出的实际 backup_path
-python -m steam_release_guard backup-verify 'D:/PrivateBackups/MyGame/时间编号' --json
-python -m steam_release_guard backup-restore 'D:/PrivateBackups/MyGame/时间编号' --output 'D:/Games/MyGame-Restored' --dry-run --json
-python -m steam_release_guard backup-restore 'D:/PrivateBackups/MyGame/时间编号' --output 'D:/Games/MyGame-Restored' --yes --json
-```
+- 不是反作弊系统、资源加密壳或反盗版保证。重要交易、奖励、权限和结算须由可信服务端验证；客户端秘密可被分析。
+- 本地工具不上传工程；云端 AI 的数据使用和第三方引擎/插件行为需另行确认。Skill 不是离线隔离或权限沙箱。
+- **Steam DRM 是明确例外**：独立的 `scripts/Invoke-SteamDrm.ps1` 会上传 EXE 给 Valve，必须明确授权并使用 `-AcknowledgeExecutableUpload`。保留原 EXE，不上传 depot、不自动发行；在线/离线和测试分支重新安装仍需实测。
+- 备份、日志、报告、映射、符号、Crypto.json 保持私有并放在 depot 外；备份未做静态加密。报告不复制密钥值，但路径也可能保密。
+- 完整备份包括工程内隐藏文件、`.git`、缓存和构建，不涵盖外部依赖/存档/引擎；拒绝链接和连接点，不保证 ACL、备用数据流等元数据。恢复只创建新目录。
+- 不删除未知文件、不改密钥。冲突、损坏或 INCOMPLETE 状态应停止；回滚不强行覆盖后续改动。stage 需要支持硬链接的文件系统，失败清理只处理已核实副本，无续传；本机锁不阻止外部编辑器，不协调网络盘/跨主机。
+- “一键”不包括安装引擎、兼容性证明、Steam 上传或上线批准。存档、反射、联机、DLC、补丁与性能仍需真实构建验证。
 
-恢复输出目录必须不存在；失败时保留部分输出和相邻的 `.srg-restore.json`，状态为 INCOMPLETE。检查原因后选择另一个新目录重试，不覆盖原工程。备份含源码、资源和可能的密钥，保持本地私有，不上传 GitHub 或 Steam。详见 [完整备份与恢复](workflows/backup.md)。
+[安全政策](SECURITY.md) · [完整操作限制](docs/USAGE.zh-CN.md) · [发布人工检查表](docs/RELEASE-CHECKLIST.md)
 
-测试范围与实物验证记录见 [完整备份验收](docs/FULL-BACKUP-VALIDATION-20261125.md)。
+<a id="validation"></a>
+## 测试和验证
 
-## 会做什么
-
-| 项目 | 自动执行 | 仍需验收 |
-| --- | --- | --- |
-| Unity 6 | 安装 Editor-only 构建入口；构建时选择 IL2CPP、Windows x64、非开发模式，关闭脚本调试和性能分析，构建后恢复原设置 | IL2CPP 模块、C++ 工具链、AOT/反射、原生插件、存档、多人模式 |
-| Unreal 5 | 修改 `DefaultGame.ini`：`BuildConfiguration=PPBC_Shipping`、`IncludeDebugFiles=False`；保留其他配置和数组 | 平台 INI、Launch Profile、源码 Target 规则、UAT 实际日志与最终运行行为 |
-| 开发入口 | 检索候选调试菜单、作弊命令、Shipping 覆盖；检查发布包符号、Unity `boot.config` 和非 Shipping 命名 | 文本命中可能是假阳性；Blueprint、场景、Prefab、二进制插件和运行时快捷键需实测 |
-| 资源暴露 | 列出散装音频、模型、贴图、源码及容器；可选启用已有密钥的 UE Pak 索引加密 | Unity 资源内容、Pak 内容与 IoStore 分开验收；扩展名不能证明加密 |
-| 私有符号 | 复制分离 PDB、MDB、debug/sym 文件及 Unity 的 do-not-ship 文件夹，保存 SHA256 对照清单 | UE 未暂存到包内的符号仍在构建输出中，需要另行保留并核对同一版本 |
-| Steam DRM | 提供独立的显式选择脚本，保留输入 EXE，输出新文件 | 需要 Steamworks 权限；会上传 EXE 给 Valve；需要测试分支重新安装验收 |
-
-## 引擎适配边界
-
-**Unity**
-
-- 安装位置：`Assets/SteamReleaseGuard/Editor/`。安装本身不更改 `PlayerSettings`，不会令现有构建自动变成 IL2CPP。
-- 在 **File → Build Profiles** 选择 Windows 的平台配置，切到 Windows x64，并启用需要发布的场景。
-- 使用 **Tools → Steam Release Guard → Build Windows Release**，选择新的空输出目录。
-- 首版拒绝自定义 Build Profile，避免悄悄忽略其场景、PlayerSettings 和宏覆盖。已有 Addressables、AssetBundle、自定义构建流水线需单独集成；本工具不负责生成这些内容。
-- 使用 Unity 编辑器的普通 Build 按钮或其他构建脚本不会自动受到本适配器保护。适配器只校验自己的构建。
-- `finally` 恢复正常退出时的后端、开发、调试、分析和子目标设置；Unity 崩溃或进程被强制终止时，需要检查这些设置或从项目版本控制恢复。
-- IL2CPP 仍含可逆向的原生代码与元数据，不加密资源。不要自行删除 `global-metadata.dat`。
-
-**Unreal**
-
-- 通过 `EngineAssociation` 识别 UE 5.x；GUID / 自编译引擎关联只能检查，适配前需人工核实版本，不自动升级引擎。
-- 可选的 `--encrypt-pak-index` 要求在 **Project Settings → Encryption** 已生成非零的 256-bit 主密钥。不会生成、轮换或打印密钥。
-- 该选项写入 `UsePakFile=True` 和 `bEncryptPakIndex=True`，保留 `bUseIoStore`。Pak 索引加密不能证明 `.utoc/.ucas` 或资源主体受到保护。
-- 不自动启用 `Encrypt All Asset Files`。已经启用时提示检查加载耗时、补丁大小和更新兼容性。
-- `DefaultCrypto.ini` 与本地备份可能含私有密钥；本工具不会把它们上传到此仓库。请按团队密钥管理办法保存，不能因客户端有密钥就宣称无法提取。
-
-## CLI
-
-在仓库根目录运行（下面 `python` 指 Python 3.10+）：
-
-```powershell
-# 只预览文件清单；不创建状态目录，不写工程
-python -m steam_release_guard plan 'D:/Games/MyGame'
-
-# 先预览；确认本次范围后才使用 --yes 写入
-python -m steam_release_guard apply 'D:/Games/MyGame' --dry-run --json
-python -m steam_release_guard apply 'D:/Games/MyGame' --yes --json
-
-# Unreal 可选索引加密；必须先在引擎内建立有效密钥
-python -m steam_release_guard apply 'D:/Games/MyGame' --encrypt-pak-index --dry-run --json
-
-# 检查实际 Steam depot 内容目录
-python -m steam_release_guard audit 'D:/Games/MyGame' --build 'D:/Builds/MyGame-v1'
-
-# 私有符号单独归档，保留原始构建；不会自动删除其他可疑文件
-python -m steam_release_guard stage 'D:/Builds/MyGame-v1' `
-  --release 'D:/Release/MyGame-v1' --symbols 'D:/PrivateSymbols/MyGame-v1' --dry-run --json
-
-# 回滚最近一次未回滚的适配
-python -m steam_release_guard rollback 'D:/Games/MyGame' --dry-run --json
-```
-
-构建脚本只生成、不执行；使用原项目准确版本的 `Unity.exe` 或 `RunUAT.bat`：
-
-```powershell
-python -m steam_release_guard build-script 'D:/Games/MyGame' `
-  --tool 'D:/Engines/Unity/Editor/Unity.exe' `
-  --output 'D:/Builds/MyGame-v2' --save 'D:/Builds/build-my-game-v2.ps1' --dry-run --json
-```
-
-Unreal 生成 `BuildCookRun -platform=Win64 -clientconfig=Shipping -serverconfig=Shipping -nodebuginfo` 等参数；现有 `bUseIoStore=True` 时增加 `-iostore`。不要用历史 Development 产物填入新构建目录。脚本路径拒绝 `% ! & | < > ^` 等批处理特殊字符，支持空格、中文和单引号。
-
-写操作预览后，用户明确授权才将 `--dry-run` 换为 `--yes` 执行。不加两者时，交互终端询问；非交互/JSON 模式返回 `CONFIRMATION_REQUIRED`。`--json` 输出单个结果对象，`--progress` 向 stderr 输出阶段事件，GUI 同步提供进度和取消按钮。备份/复制阶段可取消，项目写入、回滚和最终提交阶段不可取消。
-
-退出码：`0` = 完成或预览；`1` = 操作错误；`2` = 自动检查阻断（适配可能已保存）；`3` = 尚未确认；`130` = 取消。`audit --fail-on-warnings` 也将候选风险作为 CI 失败。
-
-**退出码 0 不代表可上线。** 没提供发布包时是工程检查；所有报告保留 `REQUIRES_MANUAL_REVIEW` 或 `BLOCKED`，不会把缺失的实机证据算作通过。`review` 是需要人工验证，`warn` 是需要判断的候选问题，`fail` 是已检出的发布阻断项。
-
-报告默认在工程 `.steam-release-guard/reports/latest/`；`--report-dir` 必须使用新的空目录或本工具已有的报告目录。报告列出路径和规则，不复制源码片段或密钥值。
-
-## Steam DRM：独立操作
-
-先阅读 [Valve Steam DRM 文档](https://partner.steamgames.com/doc/features/drm)。该服务在服务器端包裹可执行文件，**会把原始 EXE 上传给 Valve**。
-
-```powershell
-./scripts/Invoke-SteamDrm.ps1 `
-  -SteamCmd 'D:/Steamworks/tools/ContentBuilder/builder/steamcmd.exe' `
-  -AppId 123456 -Account 'your_build_account' `
-  -InputExe 'D:/Release/MyGame/Game.exe' `
-  -OutputExe 'D:/ReleaseWrapped/MyGame/Game.exe' `
-  -AcknowledgeExecutableUpload
-```
-
-目录需事先存在，输出文件必须是新文件。SteamCMD 自行处理登录 / Steam Guard；不要把密码写进脚本。`-Flags` 支持官方列出的 `0 / 6 / 32 / 38`，默认 `0`；兼容性模式请按官方说明测试。
-
-脚本不替换原 EXE、不上传 depot、不改上线分支。审核新输出、按发行流程签名、放入新暂存副本，再从测试分支重新安装，验证正版玩家的在线、离线、Steam 启动、存档和联机体验。愿望单与销售比例不能证明盗版损失。
-
-## 恢复与测试
-
-每次有修改的适配先完成工程外的完整文件备份，再保存本次待修改文件的原件并核对 SHA256，最后写新内容。逐文件回滚备份及事务记录仍在 `.steam-release-guard/backups/`，并记录完整备份位置。schema 2 包含状态、数量及日志校验，仍支持旧 schema 1 回滚。后续修改、日志/备份损坏会阻止恢复。写入失败保留日志，解决文件占用/空间不足后可重复 rollback。不要删除恢复目录或锁文件。
-
-同一主机通过 OS 文件锁保守串行化写任务（包括未传工程参数的旧 stage 调用），另有工程锁。默认锁目录在系统临时目录的 `steam-release-guard-locks`；若需指定 D 盘位置，为本工具所有进程设置同一 `SRG_LOCK_DIRECTORY`。不要在操作过程中更换它。锁不阻止外部编辑器，也不支持跨主机/网络盘协调。进程退出后锁自动释放；磁盘预检不能排除复制过程中空间被其他程序耗尽。
-
-stage 使用独立事务；发布目录 `.srg-stage.json` 只有完成后才为 COMPLETE，失败为 INCOMPLETE 并阻断 audit。私有目录保存 `srg-stage-journal.json`。安全清理只删除经核验的失败副本，保留原构建、未知文件与恢复日志：
-
-```powershell
-python -m steam_release_guard stage-cleanup 'D:/PrivateSymbols/MyGame-v1/srg-stage-journal.json' --dry-run --json
-```
-
-授权清理范围后换为 `--yes`。本版不提供续传。stage 提交副本使用同卷硬链接避免覆盖，输出文件系统需支持硬链接（例如 NTFS）；不支持时会安全失败。初始记录尚未落盘就发生写满/断电，可能需要人工处理空目录或临时记录；不保证硬件断电恢复。SHA256 用于校验意外损坏，不是防恶意篡改签名。
-
-回滚保留本地恢复记录，以及 Unity 后来生成的目录 / `.meta` 文件。不要将 `.steam-release-guard` 复制进 Steam depot；它包含私有工程备份。工具不为用户工程自动执行 Git 提交。
-
-```powershell
+```shell
 python -m unittest discover -s tests -v
 python -m compileall -q steam_release_guard
-# 已安装 Unity 的机器上，仅编译适配器并核对 API；不打包游戏、不下载依赖
-./scripts/Test-UnityAdapter.ps1 -UnityEditor 'D:/Engines/Unity/Editor/Unity.exe'
 ```
 
-GitHub Actions 覆盖 Windows / Linux、Python 3.10 / 3.12 的工具测试，不含 Unity / Unreal 许可证、引擎下载、游戏构建或 Steam 凭据。
+CI 覆盖 **Windows / Linux × Python 3.10 / 3.12**：行为、备份恢复、事务、文档命令、模块编译；Windows 另检查 PowerShell 语法。Linux 无桌面显示时跳过 GUI 和 Windows 文件占用测试；Windows CI 执行这些项目。本机 Windows 10 的旧 symlink 测试受权限限制跳过。
 
-更多：[P0 实施前审查](docs/V2-P0-REVIEW.md) · [P0 验证记录](docs/V2-P0-VALIDATION.md) · [发布人工验收表](docs/RELEASE-CHECKLIST.md) · [来源与复用评估](docs/SOURCES.md) · [v0.1 验证记录](docs/VALIDATION.md) · [安全边界](SECURITY.md)
+PR #2 和更新后的 PR #1 矩阵均通过；当前提交看顶部实时 CI 徽章与 [Actions](https://github.com/huangzhuzhu75-bit/steam-release-guard/actions)。合成夹具不是实际游戏，API 编译不是引擎构建或游戏运行。当前未发布 Stable 版本。
 
-MIT License。Unity、Unreal、Steam 为各自权利人的商标，本项目与其无隶属关系。
+[P0 验证](docs/P0-ACCEPTANCE-20261125.md) · [备份验证](docs/FULL-BACKUP-VALIDATION-20261125.md) · [P3 验证](docs/P3-VALIDATION.md) · [Skill 验证](docs/SKILL-VALIDATION-20261125.md)
+
+## 目录结构
+
+```text
+steam_release_guard/        CLI, GUI, backup, transactions
+  advanced/                 Opt-in adapters and evidence checks
+adapters/                   Unity / Obfuz Editor bridges
+skills/steam-release-guard/  One Skill, installation, examples, license
+workflows/                  Backup, engines, inspection, rollback
+docs/                       Sources, validation, detailed usage
+scripts/                    Launcher, API checks, explicit Steam DRM
+tests/                      Behavioral, recovery and documentation tests
+```
+
+## License
+
+[MIT](LICENSE)，可用于商业项目；第三方引擎、SDK、保护器仍适用各自许可证。本仓库不分发商业保护器或引擎二进制。[来源记录](docs/SOURCES.md)
+
+Unity、Unreal、Steam 是各自权利人的商标，本项目与其无隶属或背书关系。
+
+## 贡献与反馈
+
+欢迎最小合成复现、文档改进和带版本/证据的兼容性结果。先读 [CONTRIBUTING.md](CONTRIBUTING.md)，保留旧测试、备份/回滚与证据边界。[提交 Issue](https://github.com/huangzhuzhu75-bit/steam-release-guard/issues) 前移除源码、资源、密钥及个人信息；安全问题按 [SECURITY.md](SECURITY.md) 处理。未启用 Discussions，不展示其入口。
+
+---
+
+[简体中文](README.md) | [English](README.en.md)
