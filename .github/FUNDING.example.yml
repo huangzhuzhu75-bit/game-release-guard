@@ -1,0 +1,15 @@
+# TEMPLATE ONLY / 仅为模板：此文件不会启用 GitHub Sponsor 按钮。
+# Do not rename/copy this to FUNDING.yml with placeholders still present.
+# 未收到维护者确认的真实公开链接前，不创建正式 FUNDING.yml。
+# See ../SPONSORING.md and ../SPONSORING.en.md for activation steps.
+# Use verified platform handles, not full URLs; remove unconfigured entries.
+# 只保留已确认且可公开收款的渠道；填写用户名，不填完整 URL。
+
+github: ["REPLACE_WITH_VERIFIED_GITHUB_SPONSORS_HANDLE"]
+ko_fi: "REPLACE_WITH_VERIFIED_KO_FI_HANDLE"
+buy_me_a_coffee: "REPLACE_WITH_VERIFIED_BUY_ME_A_COFFEE_HANDLE"
+patreon: "REPLACE_WITH_VERIFIED_PATREON_HANDLE"
+
+# Reserved for later; do not enable until a real project page is confirmed.
+# Open Collective 仅预留，不属于首批启用渠道。
+# open_collective: "REPLACE_WITH_VERIFIED_OPEN_COLLECTIVE_SLUG"

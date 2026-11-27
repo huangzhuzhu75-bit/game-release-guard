@@ -15,7 +15,7 @@
 
 **Multi-Engine AI Skills V1.0 · 本地工具仍为 Early Development / Advanced Protection Candidate。** P0、P3 和独立 Skill 已整合到 `main`，程序版本仍为 `0.2.0.dev0`；不宣称 Stable / Production Ready。通过 [main ZIP](https://github.com/huangzhuzhu75-bit/game-release-guard/archive/refs/heads/main.zip) 或 Git 获取源码。[Releases](https://github.com/huangzhuzhu75-bit/game-release-guard/releases) 只展示实际发布内容，当前没有稳定发行包。
 
-[快速开始](#quick-start) · [安装 Skill](#ai-skill) · [能力与状态](#advanced) · [安全边界](#boundaries) · [验证证据](#validation)
+[快速开始](#quick-start) · [安装 Skill](#ai-skill) · [能力与状态](#advanced) · [安全边界](#boundaries) · [验证证据](#validation) · [支持项目](#sponsoring)
 
 ## 核心功能
 
@@ -215,6 +215,18 @@ tests/                      Behavioral, recovery and documentation tests
 [MIT](LICENSE)，可用于商业项目；第三方引擎、SDK、保护器仍适用各自许可证。本仓库不分发商业保护器或引擎二进制。[来源记录](docs/SOURCES.md)
 
 Unity、Unreal、Steam 是各自权利人的商标，本项目与其无隶属或背书关系。
+
+<a id="sponsoring"></a>
+## 支持项目
+
+赞助帮助持续维护 Skill、发行工具、文档和兼容性测试。**核心 Skill、源码和正常安全更新继续免费。**
+
+| GitHub Sponsors | Ko-fi | Buy Me a Coffee | Patreon |
+| --- | --- | --- | --- |
+| [赞助说明](SPONSORING.md#github-sponsors) | [赞助说明](SPONSORING.md#ko-fi) | [赞助说明](SPONSORING.md#buy-me-a-coffee) | [会员与赞助说明](SPONSORING.md#patreon) |
+| 待配置 | 待配置 | 待配置 | 待配置 |
+
+四个入口目前均为说明页，尚未配置付款链接；真实公开主页确认后才启用 Sponsor 按钮。[赞助方案、可选档位与费用](SPONSORING.md) · [English](SPONSORING.en.md) · [维护者启用步骤](SPONSORING.md#activation)
 
 ## 贡献与反馈
 
