@@ -9,7 +9,7 @@ from pathlib import Path
 from steam_release_guard.cli import parser
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCUMENTS = [ROOT / name for name in ("README.md", "README.en.md", "CONTRIBUTING.md", "docs/USAGE.zh-CN.md", "AI-START.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md",
+DOCUMENTS = [ROOT / name for name in ("README.md", "README.en.md", "SPONSORING.md", "SPONSORING.en.md", "CONTRIBUTING.md", "docs/USAGE.zh-CN.md", "AI-START.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md",
                                     "skills/game-release-guard/SKILL.md")]
 DOCUMENTS += sorted((ROOT / "workflows").glob("*.md"))
 DOCUMENTS += [ROOT / "skills/game-release-guard" / name for name in ("INSTALL.md", "INSTALL.en.md", "EXAMPLES.md", "EXAMPLES.en.md")]

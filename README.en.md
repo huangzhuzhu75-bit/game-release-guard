@@ -15,7 +15,7 @@
 
 **Multi-Engine AI Skills V1.0 · Local toolkit: Early Development / Advanced Protection Candidate.** P0, P3 and the standalone Skill are integrated into `main`. The program version remains `0.2.0.dev0`; this is not a Stable or Production Ready release. Get the source from [main ZIP](https://github.com/huangzhuzhu75-bit/game-release-guard/archive/refs/heads/main.zip) or Git. [Releases](https://github.com/huangzhuzhu75-bit/game-release-guard/releases) lists actual publications only; no stable distribution is available.
 
-[Quick start](#quick-start) · [Install the Skill](#ai-skill) · [Capabilities](#advanced) · [Security boundaries](#boundaries) · [Evidence](#validation)
+[Quick start](#quick-start) · [Install the Skill](#ai-skill) · [Capabilities](#advanced) · [Security boundaries](#boundaries) · [Evidence](#validation) · [Support the project](#sponsoring)
 
 ## Core capabilities
 
@@ -215,6 +215,18 @@ tests/                      Behavioral, recovery and documentation tests
 [MIT](LICENSE), including commercial use. Third-party engines, SDKs and protectors retain their own license terms. This repository does not distribute commercial protectors or engine binaries. [Source records](docs/SOURCES.md)
 
 Unity, Unreal and Steam are trademarks of their respective owners. This project is not affiliated with or endorsed by them.
+
+<a id="sponsoring"></a>
+## Support the project
+
+Sponsorship helps maintain the Skill, release tools, documentation and compatibility tests. **The core Skill, source code and normal security updates remain free.**
+
+| GitHub Sponsors | Ko-fi | Buy Me a Coffee | Patreon |
+| --- | --- | --- | --- |
+| [Sponsorship details](SPONSORING.en.md#github-sponsors) | [Sponsorship details](SPONSORING.en.md#ko-fi) | [Sponsorship details](SPONSORING.en.md#buy-me-a-coffee) | [Membership and sponsorship details](SPONSORING.en.md#patreon) |
+| Pending setup | Pending setup | Pending setup | Pending setup |
+
+All four entries currently lead to information pages, with no configured payment links. Sponsor will be enabled only after real public profiles are confirmed. [Options, suggested tiers and fees](SPONSORING.en.md) · [简体中文](SPONSORING.md) · [Maintainer activation steps](SPONSORING.en.md#activation)
 
 ## Contributing and feedback
 
